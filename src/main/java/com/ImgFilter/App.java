@@ -2,6 +2,7 @@ package com.ImgFilter;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 
 
 public class App {
@@ -12,7 +13,8 @@ public class App {
 	
 	public static final String ARG_HELP = "--help";
 	public static final String ARG_DISABLE_MASK = "--disable-mask";
-	public static boolean saveOnExit = false;
+	private static boolean isMaskDisabled = false;
+	private static boolean saveOnExit = false;
 	
 	private static String[] argsMain;
 	public static String[] getArgs() {
@@ -41,6 +43,9 @@ public class App {
 			System.out.println("Use \"--help\" for help.");
 			System.exit(1);
 		}
+		if (Arrays.asList(args).contains(ARG_DISABLE_MASK))
+			isMaskDisabled = true;
+		
 		importImage(args[ARGS_INDEX_INPUT_IMAGE_FILE], args[ARGS_INDEX_MASK_IMAGE_FILE]);
 		
 		new Thread(() -> {
@@ -77,11 +82,24 @@ public class App {
     }
     
     public static void importMaskImage(String maskPath) throws IOException {
-    	if (maskPath == null || maskPath.isBlank() || maskPath.trim().equals(ARG_DISABLE_MASK)) {
+    	if (maskPath == null || maskPath.isBlank() || isMaskDisabled) {
     		System.err.println("Not using mask file: No mask file supplied");
     		return;
     	}
     	File maskFile = new File(maskPath);
     	filterFrontend.importMaskFile(maskFile);
+    }
+    
+    public static boolean isMaskDisabled() {
+    	return isMaskDisabled;
+    }
+    public static void setMaskDisabled(boolean newValue) {
+    	isMaskDisabled = newValue;
+    }
+    public static boolean isSaveOnExit() {
+    	return saveOnExit;
+    }
+    public static void setSaveOnExit(boolean newSaveOnExit) {
+    	saveOnExit = newSaveOnExit;
     }
 }

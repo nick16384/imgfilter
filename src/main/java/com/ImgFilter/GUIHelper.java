@@ -119,10 +119,13 @@ public class GUIHelper extends Application {
     	
     	TextField imagePathField = new TextField(App.getArgs()[App.ARGS_INDEX_INPUT_IMAGE_FILE]);
     	imagePathField.setMinWidth(300);
+    	imagePathField.setEditable(false);
     	TextField imageMaskPathField = new TextField(App.getArgs()[App.ARGS_INDEX_MASK_IMAGE_FILE]);
     	imageMaskPathField.setMinWidth(300);
+    	imageMaskPathField.setEditable(false);
     	TextField imageOutPathField = new TextField(App.getArgs()[App.ARGS_INDEX_OUTPUT_IMAGE_FILE]);
     	imageOutPathField.setMinWidth(300);
+    	imageOutPathField.setEditable(false);
     	
     	Button importImageButton = new Button("Import Img.");
     	FileChooser imageImporter = new FileChooser();
@@ -166,6 +169,10 @@ public class GUIHelper extends Application {
     	maskOptionsPane.add(showMaskCheckbox, 0, 0);
     	maskOptionsPane.add(preApplyMaskCheckbox, 0, 1);
     	maskOptionsPane.add(preMaskSelectionDropdown, 1, 1);
+    	if (App.isMaskDisabled()) {
+    		imageMaskPathField.setDisable(true);
+    		maskOptionsPane.setDisable(true);
+    	}
     	
     	ComboBox<RGBAChannel> channelSelectionDropdown =
     			new ComboBox<>(FXCollections.observableArrayList(RGBAChannel.values()));
@@ -276,9 +283,16 @@ public class GUIHelper extends Application {
     		imageMaskPathField.setText(newMaskFile.getAbsolutePath());
     		try { App.importMaskImage(newMaskFile.getAbsolutePath()); }
     		catch (IOException ioe) {
+    			App.setMaskDisabled(true);
+    			imageMaskPathField.setDisable(true);
+	    		maskOptionsPane.setDisable(true);
+	    		
     			System.err.println("IOException importing mask.");
     			ioe.printStackTrace();
     		}
+    		App.setMaskDisabled(false);
+    		imageMaskPathField.setDisable(false);
+    		maskOptionsPane.setDisable(false);
     		maskImg.setImage(convertToFxImage(App.filterFrontend.getMaskImage()));
     		rescaleImageView(maskImg, MASK_TARGET_SCALE_X, img.getFitHeight());
     	});
@@ -308,7 +322,7 @@ public class GUIHelper extends Application {
     	});
     	
     	saveOnExitCheckbox.selectedProperty().addListener((observable, oldValue, newValue) -> {
-    		App.saveOnExit = newValue;
+    		App.setSaveOnExit(newValue);
     	});
     	
     	filterGroupProgressLabel.textProperty().bind(
@@ -401,7 +415,7 @@ public class GUIHelper extends Application {
 	
 	@Override
 	public void stop() {
-		if (App.saveOnExit) {
+		if (App.isSaveOnExit()) {
 			try {
     			File imageSaveFile = imageExporter.showSaveDialog(primaryStage);
     			App.filterFrontend.saveFileTo(imageSaveFile);
