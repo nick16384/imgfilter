@@ -1,36 +1,32 @@
 package filters;
 
-import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
 
 import filters.base.Filter;
-import filters.base.MultiPassFilterApplicator;
+import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
-import filters.base.PostProcessPixelTransformer;
-import filters.base.PrePass;
 
-import static filters.base.FilterUtils.*;
+import static filters.base.Filter.*;
 
 /**
  * Converts the image to grayscale. (RGBA values all have the same value per pixel)
  */
-public final class Grayscale implements Filter<BufferedImage> {
-	private static final List<PixelTransformer<BufferedImage>> mainPasses = Arrays.asList(
-			(x, y, argb, prePassData, source, mask, strength) -> {
-				int avg = (getRed(argb) + getGreen(argb) + getBlue(argb)) / 3;
+public final class Grayscale implements Filter<ImageRaster> {
+	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
+			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
+				int avg = (_red + _green + _blue) / 3;
 				int redNew = avg;
 				int greenNew = avg;
 				int blueNew = avg;
-				int alphaNew = avg;
 				
-				int modifiedRGB = toARGB(redNew, greenNew, blueNew, alphaNew);
+				int[] modifiedRGB = packPixelData(redNew, greenNew, blueNew);
 				return modifiedRGB;
 			}
 		);
 	
 	@Override
-	public List<PixelTransformer<BufferedImage>> getMainPassTransformers() {
+	public List<PixelTransformer<ImageRaster>> getMainPassTransformers() {
 		return mainPasses;
 	}
 	

@@ -1,64 +1,61 @@
 package filters;
 
-import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
 
 import filters.base.Filter;
-import filters.base.MultiPassFilterApplicator;
+import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
-import filters.base.PostProcessPixelTransformer;
-import filters.base.PrePass;
 
-import static filters.base.FilterUtils.*;
+import static filters.base.Filter.*;
+import static filters.base.UnsignedIntOperations.*;
 
 /**
  * A sharpening filter.
  * Subtracts a blurred image from the original one to obtain a "detail" mask.
  * This detail mask is added to the original image to increase contrast of details.
  */
-public final class Sharpening implements Filter<BufferedImage> {
-	private static final List<PixelTransformer<BufferedImage>> mainPasses = Arrays.asList(
-			(x, y, argb, prePassData, source, mask, strength) -> {
+public final class Sharpening implements Filter<ImageRaster> {
+	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
+			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
 				
 				double avgRed = 0;
 				double avgGreen = 0;
 				double avgBlue = 0;
-				int delta = (int)(50.0 * strength);
+				int delta = (int)(50.0 * _strength);
 				for (int dx = -delta; dx <= delta; dx++) {
-					int nx = clamp(x + dx, 0, source.getWidth() - 1);
+					int nx = clamp(_x + dx, 0, _source.getWidth() - 1);
 					for (int dy = -delta; dy <= delta; dy++) {
-						int ny = clamp(y + dy, 0, source.getHeight() - 1);
+						int ny = clamp(_y + dy, 0, _source.getHeight() - 1);
 						
-						int adjRGB = source.getRGB(nx, ny);
-						avgRed += getRed(adjRGB);
-						avgGreen += getGreen(adjRGB);
-						avgBlue += getBlue(adjRGB);
+						avgRed += _source.getRedAt(nx, ny);
+						avgGreen += _source.getGreenAt(nx, ny);
+						avgBlue += _source.getBlueAt(nx, ny);
 					}
 				}
 				avgRed /= ((2 * delta) + 1) * ((2 * delta) + 1);
 				avgGreen /= ((2 * delta) + 1) * ((2 * delta) + 1);
 				avgBlue /= ((2 * delta) + 1) * ((2 * delta) + 1);
 				
-				int detailRed = getRed(argb) - (int)avgRed;
-				int detailGreen = getGreen(argb) - (int)avgGreen;
-				int detailBlue = getBlue(argb) - (int)avgBlue;
+				int detailRed = _red - (int)avgRed;
+				int detailGreen = _green - (int)avgGreen;
+				int detailBlue = _blue - (int)avgBlue;
 				
 				// Make mask a little darker to avoid overly bright images.
 				detailRed -= 20;
 				detailGreen -= 20;
 				detailBlue -= 20;
 				
-				int newRed = clamp0255(getRed(argb) + detailRed);
-				int newGreen = clamp0255(getGreen(argb) + detailGreen);
-				int newBlue = clamp0255(getBlue(argb) + detailBlue);
+				int newRed = safe_add(_red, detailRed);
+				int newGreen = safe_add(_green, detailGreen);
+				int newBlue = safe_add(_blue, detailBlue);
 				
-				return toARGB(newRed, newGreen, newBlue, getAlpha(argb));
+				return packPixelData(newRed, newGreen, newBlue);
 			}
 		);
 	
 	@Override
-	public List<PixelTransformer<BufferedImage>> getMainPassTransformers() {
+	public List<PixelTransformer<ImageRaster>> getMainPassTransformers() {
 		return mainPasses;
 	}
 	

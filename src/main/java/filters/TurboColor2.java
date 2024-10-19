@@ -1,16 +1,14 @@
 package filters;
 
-import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
 
 import filters.base.Filter;
-import filters.base.MultiPassFilterApplicator;
+import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
-import filters.base.PostProcessPixelTransformer;
-import filters.base.PrePass;
 
-import static filters.base.FilterUtils.*;
+import static filters.base.Filter.*;
+import static filters.base.UnsignedIntOperations.*;
 
 /**
  * Multiplies channel values with 0.0 to 2.0 depending on strength.
@@ -18,19 +16,19 @@ import static filters.base.FilterUtils.*;
  * Only useful when using channel specific filter.
  * Note: Original TurboColor has been replaced by "Erase"
  */
-public final class TurboColor2 implements Filter<BufferedImage> {
-	private static final List<PixelTransformer<BufferedImage>> mainPasses = Arrays.asList(
-			(x, y, argb, prePassData, source, mask, strength) -> {
-				return toARGB(
-						clamp0255((int)(2.0 * strength * getRed(argb))),
-						clamp0255((int)(2.0 * strength * getGreen(argb))),
-						clamp0255((int)(2.0 * strength * getBlue(argb))),
-						clamp0255((int)(2.0 * strength * getAlpha(argb))));
+public final class TurboColor2 implements Filter<ImageRaster> {
+	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
+			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
+				int str = (int)(2.0 * _strength);
+				return packPixelData(
+						safe_mul(str, _red),
+						safe_mul(str, _green),
+						safe_mul(str, _blue));
 			}
 		);
 	
 	@Override
-	public List<PixelTransformer<BufferedImage>> getMainPassTransformers() {
+	public List<PixelTransformer<ImageRaster>> getMainPassTransformers() {
 		return mainPasses;
 	}
 	

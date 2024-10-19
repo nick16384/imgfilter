@@ -1,33 +1,29 @@
 package filters;
 
-import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
 
 import filters.base.Filter;
-import filters.base.MultiPassFilterApplicator;
+import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
-import filters.base.PostProcessPixelTransformer;
-import filters.base.PrePass;
 
-import static filters.base.FilterUtils.*;
+import static filters.base.Filter.*;
 
 /**
  * Inverts the image (RGBA values are multiplied with -1)
  */
-public final class Inverted implements Filter<BufferedImage> {
-	private static final List<PixelTransformer<BufferedImage>> mainPasses = Arrays.asList(
-			(x, y, argb, prePassData, source, mask, strength) -> {
-				int newRed = 255 - getRed(argb);
-				int newGreen = 255 - getGreen(argb);
-				int newBlue = 255 - getBlue(argb);
-				int newAlpha = 255 - getAlpha(argb);
-				return toARGB(newRed, newGreen, newBlue, newAlpha);
+public final class Inverted implements Filter<ImageRaster> {
+	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
+			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
+				int newRed = 255 - _red;
+				int newGreen = 255 - _green;
+				int newBlue = 255 - _blue;
+				return packPixelData(newRed, newGreen, newBlue);
 			}
 		);
 	
 	@Override
-	public List<PixelTransformer<BufferedImage>> getMainPassTransformers() {
+	public List<PixelTransformer<ImageRaster>> getMainPassTransformers() {
 		return mainPasses;
 	}
 	

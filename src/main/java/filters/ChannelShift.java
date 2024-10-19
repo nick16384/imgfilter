@@ -10,15 +10,13 @@ import filters.base.PixelTransformer;
 import static filters.base.Filter.*;
 
 /**
- * Averages ARGB values of source image and mask.
+ * Shifts channels replacing them with the next one (red -> green, green -> blue, blue -> red).
+ * Does not shift the alpha channel.
  */
-public final class Mask_Avg implements Filter<ImageRaster> {
+public final class ChannelShift implements Filter<ImageRaster> {
 	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
 			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
-				int newRed = (_red + _mask.getRedAt(_x, _y)) / 2;
-				int newGreen = (_green + _mask.getGreenAt(_x, _y)) / 2;
-				int newBlue = (_blue + _mask.getBlueAt(_x, _y)) / 2;
-				return packPixelData(newRed, newGreen, newBlue);
+				return packPixelData(_green, _blue, _red);
 			}
 		);
 	
@@ -29,6 +27,6 @@ public final class Mask_Avg implements Filter<ImageRaster> {
 	
 	@Override
 	public String getName() {
-		return "Average mask";
+		return "Channel shift";
 	}
 }

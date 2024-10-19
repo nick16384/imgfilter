@@ -1,32 +1,29 @@
 package filters;
 
-import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
 
 import filters.base.Filter;
-import filters.base.MultiPassFilterApplicator;
+import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
-import filters.base.PostProcessPixelTransformer;
-import filters.base.PrePass;
 
-import static filters.base.FilterUtils.*;
+import static filters.base.Filter.*;
 
 /**
  * Multiplies source image ARGB values with mask values.
  */
-public final class Mask_Multiply implements Filter<BufferedImage> {
-	private static final List<PixelTransformer<BufferedImage>> mainPasses = Arrays.asList(
-			(x, y, argb, prePassData, source, mask, strength) -> {
-				int newRed = (int)(getRed(argb) * ((double)getRed(mask.getRGB(x, y)) / 255));
-				int newGreen = (int)(getGreen(argb) * ((double)getGreen(mask.getRGB(x, y)) / 255));
-				int newBlue = (int)(getBlue(argb) * ((double)getBlue(mask.getRGB(x, y)) / 255));
-				return toARGB(newRed, newGreen, newBlue, getAlpha(argb));
+public final class Mask_Multiply implements Filter<ImageRaster> {
+	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
+			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
+				int newRed = (int)(_red * ((double)_mask.getRedAt(_x, _y) / ImageRaster.MAX_SAMPLE_VALUE));
+				int newGreen = (int)(_green * ((double)_mask.getGreenAt(_x, _y) / ImageRaster.MAX_SAMPLE_VALUE));
+				int newBlue = (int)(_blue * ((double)_mask.getBlueAt(_x, _y) / ImageRaster.MAX_SAMPLE_VALUE));
+				return packPixelData(newRed, newGreen, newBlue);
 			}
 		);
 	
 	@Override
-	public List<PixelTransformer<BufferedImage>> getMainPassTransformers() {
+	public List<PixelTransformer<ImageRaster>> getMainPassTransformers() {
 		return mainPasses;
 	}
 	

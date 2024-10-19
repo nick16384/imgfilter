@@ -1,12 +1,6 @@
 package com.ImgFilter;
 
-import java.awt.Transparency;
-import java.awt.Window.Type;
-import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
-import java.awt.image.ComponentColorModel;
-import java.awt.image.DataBuffer;
-import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,9 +10,9 @@ import javax.imageio.ImageIO;
 
 import filters.FiltersList;
 import filters.base.Filter;
-import filters.base.FilterUtils;
+import filters.base.ImageRaster;
 import filters.base.MultiPassFilterApplicator;
-import filters.base.RGBAChannel;
+import filters.base.RGBChannel;
 
 /**
  * Note: Errors on linux might be fixed by additionally checking
@@ -26,7 +20,7 @@ import filters.base.RGBAChannel;
  */
 
 public class ImgFilterFrontend {
-	Filter<BufferedImage> currentFilter;
+	Filter<ImageRaster> currentFilter;
 	private final File imgFile;
 	private File maskFile;
 	// Two images act as a double buffer:
@@ -56,21 +50,30 @@ public class ImgFilterFrontend {
 			throw new IOException("Input file is not an image file. (File name suffix)");
 		
 		this.imgFile = imgIn;
-		BufferedImage emptyImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
-		ComponentColorModel colorModel = new ComponentColorModel(
-		        ColorSpace.getInstance(ColorSpace.CS_GRAY), false, false,
-		        Transparency.OPAQUE, DataBuffer.TYPE_DOUBLE);
-		boolean isAlphaPremultiplied = emptyImage.isAlphaPremultiplied();
-		WritableRaster raster = colorModel.createCompatibleWritableRaster(1, 1);
-
-		this.image = new BufferedImage(colorModel, raster, isAlphaPremultiplied, null);
-		this.image = ImageIO.read(imgIn);
+		BufferedImage maybeIncompatibleImage = ImageIO.read(imgIn);
+		this.image = ImageRaster.createCompatibleImage(maybeIncompatibleImage);
 		
 		imgHeight = image.getHeight();
 		imgWidth = image.getWidth();
+		System.out.println("CMIN: " + maybeIncompatibleImage.getColorModel());
+		System.out.println("CM  : " + image.getColorModel());
+		
+		System.out.println(maybeIncompatibleImage.getRaster().getPixel(500, 500, new int[3])[0]);
+		System.out.println(image.getRaster().getPixel(500, 500, new int[3])[0]);
+		
+		// Empty BufferedImage with 16-bit depth per pixel sample (48 bit per pixel)
+		/*BufferedImage emptyImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+		ComponentColorModel colorModel = new ComponentColorModel(
+		        ColorSpace.getInstance(ColorSpace.CS_LINEAR_RGB), false, false,
+		        Transparency.OPAQUE, DataBuffer.TYPE_INT); // Maybe use TYPE_DOUBLE
+		boolean isAlphaPremultiplied = emptyImage.isAlphaPremultiplied();
+		WritableRaster raster = colorModel.createCompatibleWritableRaster(imgWidth, imgHeight);
+
+		this.image = new BufferedImage(colorModel, raster, isAlphaPremultiplied, null);*/
+		
 		importMaskFile(maskIn);
 		
-		previousImages.add(FilterUtils.deepCopy(image));
+		previousImages.add(new ImageRaster(image).createDeepCopy().toBufferedImage());
 	}
 	/**
 	 * See javadoc for {@code ImgFilter(imgIn, maskIn)}
@@ -93,9 +96,9 @@ public class ImgFilterFrontend {
 		return validSuffix;
 	}
 	
-	public void applyFilter(Filter<BufferedImage> filter,
-		Filter<BufferedImage> maskOp,
-		RGBAChannel channel, double strength, int executorThreads) {
+	public void applyFilter(Filter<ImageRaster> filter,
+		Filter<ImageRaster> maskOp,
+		RGBChannel channel, double strength, int executorThreads) {
 		// Remove every image after the current history index, since the timeline is going to be changed.
 		for (int i = historyIndex + 1; i < previousImages.size(); i++)
 			previousImages.remove(i);
@@ -112,19 +115,23 @@ public class ImgFilterFrontend {
 		
 		try {
 			BufferedImage newImage;
+			ImageRaster imageRaster = new ImageRaster(image);
+			ImageRaster maskRaster = new ImageRaster(mask);
 					if (maskOp == null)
 						newImage = MultiPassFilterApplicator.applyFilter(
-								currentFilter, image, mask, channel, strength, executorThreads);
+								currentFilter, imageRaster, maskRaster, channel, strength, executorThreads)
+								.toBufferedImage();
 					else
 						newImage = MultiPassFilterApplicator.applyFilter(
-								currentFilter, image, mask, maskOp, channel, strength, executorThreads);
+								currentFilter, imageRaster, maskRaster, maskOp, channel, strength, executorThreads)
+								.toBufferedImage();
 			image = newImage;
 		} catch (RuntimeException re) {
 			System.err.println("Non-caught error running filter. Stacktrace below:");
 			re.printStackTrace();
 		}
 		
-		previousImages.add(FilterUtils.deepCopy(image));
+		previousImages.add(new ImageRaster(image).createDeepCopy().toBufferedImage());
 		historyIndex = previousImages.size() - 1;
 		showProgressThread.interrupt();
 	}
@@ -135,8 +142,8 @@ public class ImgFilterFrontend {
 	 * @param strength Filter strength (1.0 is max, 0.0 is none)
 	 * @apiNote Filter strength setting is not effective on all filter types.
 	 */
-	public void applyFilter(Filter<BufferedImage> filter,
-			RGBAChannel channel, double strength,
+	public void applyFilter(Filter<ImageRaster> filter,
+			RGBChannel channel, double strength,
 			int executorThreads) {
 		applyFilter(filter, null, channel, strength, executorThreads);
 	}

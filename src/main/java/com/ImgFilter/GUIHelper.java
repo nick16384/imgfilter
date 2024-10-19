@@ -12,8 +12,9 @@ import java.util.stream.Collectors;
 import filters.Blur101x101;
 import filters.FiltersList;
 import filters.base.Filter;
+import filters.base.ImageRaster;
 import filters.base.MultiPassFilterApplicator;
-import filters.base.RGBAChannel;
+import filters.base.RGBChannel;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.application.Application;
@@ -56,7 +57,7 @@ public class GUIHelper extends Application {
 	public static final int MASK_TARGET_SCALE_X = 1024;
 	private Stage primaryStage;
 	
-	// Which pass group is running (pre, main, post)?
+	// Which pass group is running (pre, main)?
 	private static ProgressBar filterPassGroupProgressBar;
 	// Which sub-pass from the group is running?
 	private static ProgressBar filterPassNumProgressBar;
@@ -140,15 +141,15 @@ public class GUIHelper extends Application {
     	Label filterStrengthLabel = new Label("Filter strength / sensitivity");
     	Slider filterStrengthSlider = new Slider(0.0, 1.0, 0.5);
     	
-    	ComboBox<Filter<BufferedImage>> filterSelectionDropdown = new ComboBox<>();
+    	ComboBox<Filter<ImageRaster>> filterSelectionDropdown = new ComboBox<>();
     	filterSelectionDropdown.getItems().addAll(FiltersList.FILTERS_LIST.values());
-    	StringConverter<Filter<BufferedImage>> filterStringConverter = new StringConverter<>() {
+    	StringConverter<Filter<ImageRaster>> filterStringConverter = new StringConverter<>() {
     		@Override
-    		public Filter<BufferedImage> fromString(String str) {
+    		public Filter<ImageRaster> fromString(String str) {
     			return FiltersList.fromString(str);
     		}
     		@Override
-    		public String toString(Filter<BufferedImage> filter) {
+    		public String toString(Filter<ImageRaster> filter) {
     			return FiltersList.toString(filter);
     		}
     	};
@@ -159,7 +160,7 @@ public class GUIHelper extends Application {
     	showMaskCheckbox.setSelected(true);
     	CheckBox preApplyMaskCheckbox = new CheckBox("Pre-apply mask");
     	preApplyMaskCheckbox.setSelected(false);
-    	ComboBox<Filter<BufferedImage>> preMaskSelectionDropdown = new ComboBox<>();
+    	ComboBox<Filter<ImageRaster>> preMaskSelectionDropdown = new ComboBox<>();
     	preMaskSelectionDropdown.getItems().addAll(FiltersList.MASK_FILTER_LIST.values());
     	preMaskSelectionDropdown.setConverter(filterStringConverter);
     	preMaskSelectionDropdown.setValue(FiltersList.DEFAULT_MASK_FILTER);
@@ -174,9 +175,9 @@ public class GUIHelper extends Application {
     		maskOptionsPane.setDisable(true);
     	}
     	
-    	ComboBox<RGBAChannel> channelSelectionDropdown =
-    			new ComboBox<>(FXCollections.observableArrayList(RGBAChannel.values()));
-    	channelSelectionDropdown.setValue(RGBAChannel.ALL_EXCEPT_ALPHA);
+    	ComboBox<RGBChannel> channelSelectionDropdown =
+    			new ComboBox<>(FXCollections.observableArrayList(RGBChannel.values()));
+    	channelSelectionDropdown.setValue(RGBChannel.ALL);
     	
     	filterPassGroupProgressBar = new ProgressBar(0.0);
     	filterPassGroupProgressBar.setMinWidth(300);
@@ -191,7 +192,10 @@ public class GUIHelper extends Application {
     	
     	CheckBox saveOnExitCheckbox = new CheckBox("Save on exit");
     	
-    	Slider executorThreadSelectionSlider = new Slider(1, 64, 6);
+    	double minThreads = 1;
+    	double maxThreads = Runtime.getRuntime().availableProcessors();
+    	double curThreads = (int)maxThreads / 2;
+    	Slider executorThreadSelectionSlider = new Slider(minThreads, maxThreads, curThreads);
     	Label executorThreadSelectionLabel = new Label("Parallel Executor Threads: 0");
     	
     	Button cancelButton = new Button("Cancel");
@@ -428,6 +432,9 @@ public class GUIHelper extends Application {
 	
 	// Proudly stolen from:
     // https://stackoverflow.com/questions/30970005/bufferedimage-to-javafx-image
+	// (modified)
+	// FIXME: Test if this method is 100% correctly working
+	// TODO: Add multithreading
     private static Image convertToFxImage(BufferedImage image) {
         WritableImage wr = null;
         if (image != null) {
@@ -435,7 +442,13 @@ public class GUIHelper extends Application {
             PixelWriter pw = wr.getPixelWriter();
             for (int x = 0; x < image.getWidth(); x++) {
                 for (int y = 0; y < image.getHeight(); y++) {
-                    pw.setArgb(x, y, image.getRGB(x, y));
+                	int[] rgb = image.getRaster().getPixel(x, y, (int[])(null));
+                	// Only the last 8 bits of the color components are relevant
+                	int red = (int)(((long)rgb[0] + (Integer.MAX_VALUE / 2)) / 65536 - (Integer.MAX_VALUE / 2)) & 0x000000FF;
+                	int green = (rgb[1] / 65536) & 0x000000FF;
+                	int blue = (rgb[2] / 65536) & 0x000000FF;
+                	int fxARGB = 0xFF000000 | (red << 16) | (green << 8) | blue;
+                    pw.setArgb(x, y, fxARGB);
                 }
             }
         }
@@ -475,22 +488,17 @@ public class GUIHelper extends Application {
 			switch (passGroup) {
 			case (MultiPassFilterApplicator.PASS_GROUP_NONE): {
 				filterPassGroupName.set("NONE");
-				filterPassGroupProgressBar.setProgress(0.0 / 3.0);
+				filterPassGroupProgressBar.setProgress(0.0 / 2.0);
 				break;
 			}
 			case (MultiPassFilterApplicator.PASS_GROUP_PRE): {
 				filterPassGroupName.set("PRE");
-				filterPassGroupProgressBar.setProgress(1.0 / 3.0);
+				filterPassGroupProgressBar.setProgress(1.0 / 2.0);
 				break;
 			}
 			case (MultiPassFilterApplicator.PASS_GROUP_MAIN): {
 				filterPassGroupName.set("MAIN");
-				filterPassGroupProgressBar.setProgress(2.0 / 3.0);
-				break;
-			}
-			case (MultiPassFilterApplicator.PASS_GROUP_POST): {
-				filterPassGroupName.set("POST");
-				filterPassGroupProgressBar.setProgress(1.0);
+				filterPassGroupProgressBar.setProgress(2.0 / 2.0);
 				break;
 			}
 			default: filterPassGroupName.set("UNKNOWN");

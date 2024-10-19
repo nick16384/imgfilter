@@ -11,14 +11,15 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import filters.base.Filter;
+import filters.base.ImageRaster;
 import filters.base.MultiPassFilterApplicator;
 
 /**
  * Contains a map from filter names to MultiPassFilters.
  */
 public final class FiltersList {
-	public static final HashMap<String, Filter<BufferedImage>> FILTERS_LIST =
-			new HashMap<String, Filter<BufferedImage>>(
+	public static final HashMap<String, Filter<ImageRaster>> FILTERS_LIST =
+			new HashMap<String, Filter<ImageRaster>>(
 					Map.ofEntries(
 							entry(new None().getName(),                new None()),
 							entry(new Grayscale().getName(),           new Grayscale()),
@@ -29,7 +30,7 @@ public final class FiltersList {
 							entry(new TurboColor2().getName(),         new TurboColor2()),
 							entry(new Brightness().getName(),          new Brightness()),
 							entry(new TurboTurboTM().getName(),        new TurboTurboTM()),
-							entry(new ChannelShiftNoAlpha().getName(), new ChannelShiftNoAlpha()),
+							entry(new ChannelShift().getName(), new ChannelShift()),
 							entry(new MaxBlur().getName(),             new MaxBlur()),
 							entry(new MedianBlur().getName(),          new MedianBlur()),
 							entry(new Contrast().getName(),            new Contrast()),
@@ -41,24 +42,24 @@ public final class FiltersList {
 							));
 	
 	// TODO: Make subclass MaskedMultiPassFilter
-	public static final HashMap<String, Filter<BufferedImage>> MASK_FILTER_LIST =
-			new HashMap<String, Filter<BufferedImage>>(
+	public static final HashMap<String, Filter<ImageRaster>> MASK_FILTER_LIST =
+			new HashMap<String, Filter<ImageRaster>>(
 					Map.ofEntries(
 							entry(new Mask_Add().getName(),      new Mask_Add()),
 							entry(new Mask_Avg().getName(),      new Mask_Avg()),
 							entry(new Mask_Multiply().getName(), new Mask_Multiply())
 							));
 	
-	public static final Filter<BufferedImage> DEFAULT_FILTER = new None();
+	public static final Filter<ImageRaster> DEFAULT_FILTER = new None();
 			//FILTERS_LIST.values().stream().findFirst().get();
 	
-	public static final Filter<BufferedImage> DEFAULT_MASK_FILTER = new Mask_Multiply();
+	public static final Filter<ImageRaster> DEFAULT_MASK_FILTER = new Mask_Multiply();
 	
-	public static Filter<BufferedImage> fromString(String str) {
+	public static Filter<ImageRaster> fromString(String str) {
 		return combineMaps(FILTERS_LIST, MASK_FILTER_LIST).get(str);
 	}
 	
-	public static String toString(Filter<BufferedImage> filter) {
+	public static String toString(Filter<ImageRaster> filter) {
 		return combineMaps(FILTERS_LIST, MASK_FILTER_LIST).entrySet()
 	              .stream()
 	              .filter(entry -> Objects.equals(entry.getValue(), filter))

@@ -1,38 +1,38 @@
 package filters;
 
-import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
 
 import filters.base.Filter;
-import filters.base.MultiPassFilterApplicator;
+import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
-import filters.base.PostProcessPixelTransformer;
-import filters.base.PrePass;
+import filters.base.UnsignedIntOperations;
 
-import static filters.base.FilterUtils.*;
+import static filters.base.Filter.*;
 
 /**
  * Adds / subtracts random values from each pixel channel.
  * Dependent on strength.
  */
-public final class RandomNoise implements Filter<BufferedImage> {
-	private static final List<PixelTransformer<BufferedImage>> mainPasses = Arrays.asList(
-			(x, y, argb, prePassData, source, mask, strength) -> {
-				int rndStrength = (int)(255 * strength);
-				int newRed, newGreen, newBlue, newAlpha;
-				// Clamp values to prevent over-/underflow of channel brightness
-				newRed = clamp0255(getRed(argb) + clamp(randomInt(rndStrength), -0x100, 0xFF));
-				newGreen = clamp0255(getGreen(argb) + clamp(randomInt(rndStrength), -0x100, 0xFF));
-				newBlue = clamp0255(getBlue(argb) + clamp(randomInt(rndStrength), -0x100, 0xFF));
-				newAlpha = clamp0255(getAlpha(argb) + clamp(randomInt(rndStrength), -0x100, 0xFF));
+public final class RandomNoise implements Filter<ImageRaster> {
+	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
+			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
+				int rndStrength = (int)(ImageRaster.MAX_SAMPLE_VALUE * _strength);
+				int newRed, newGreen, newBlue;
+				// TODO: Check addition/subtraction with "uint" works properly
+				newRed = UnsignedIntOperations.safe_add(_red, randomInt(rndStrength));
+				newGreen = UnsignedIntOperations.safe_add(_green, randomInt(rndStrength));
+				newBlue = UnsignedIntOperations.safe_add(_blue, randomInt(rndStrength));
+				/*newRed = clamp0MAX(_red + clamp(randomInt(rndStrength), -0x100, 0xFF));
+				newGreen = clamp0MAX(_green + clamp(randomInt(rndStrength), -0x100, 0xFF));
+				newBlue = clamp0MAX(_blue + clamp(randomInt(rndStrength), -0x100, 0xFF));*/
 				
-				return toARGB(newRed, newGreen, newBlue, newAlpha);
+				return packPixelData(newRed, newGreen, newBlue);
 			}
 		);
 	
 	@Override
-	public List<PixelTransformer<BufferedImage>> getMainPassTransformers() {
+	public List<PixelTransformer<ImageRaster>> getMainPassTransformers() {
 		return mainPasses;
 	}
 	

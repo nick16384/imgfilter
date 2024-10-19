@@ -1,65 +1,57 @@
 package filters;
 
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
 import filters.base.Filter;
-import filters.base.MultiPassFilterApplicator;
+import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
-import filters.base.PostProcessPixelTransformer;
-import filters.base.PrePass;
 
-import static filters.base.FilterUtils.*;
+import static filters.base.Filter.*;
 
 /**
  * Blurs by using the median value of surrounding pixels.
  */
-public final class MedianBlur implements Filter<BufferedImage> {
-	private static final List<PixelTransformer<BufferedImage>> mainPasses = Arrays.asList(
-			(x, y, argb, prePassData, source, mask, strength) -> {
-				int imgWidth = source.getWidth();
-				int imgHeight = source.getHeight();
+public final class MedianBlur implements Filter<ImageRaster> {
+	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
+			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
+				int imgWidth = _source.getWidth();
+				int imgHeight = _source.getHeight();
 				
 				// New colors are the median of their adjacent
 				// colors, resulting in a blurred image (and removing noise).
 				List<Integer> adjReds = new ArrayList<Integer>();
 				List<Integer> adjGreens = new ArrayList<Integer>();
 				List<Integer> adjBlues = new ArrayList<Integer>();
-				List<Integer> adjAlphas = new ArrayList<Integer>();
-				int delta = (int)(50.0 * strength);
+				int delta = (int)(50.0 * _strength);
 				for (int dx = -delta; dx <= delta; dx++) {
 					for (int dy = -delta; dy <= delta; dy++) {
 						// Prevent out of range pixel coordinates
-						int newX = clamp(x + dx, 0, imgWidth - 1);
-						int newY = clamp(y + dy, 0, imgHeight - 1);
+						int newX = clamp(_x + dx, 0, imgWidth - 1);
+						int newY = clamp(_y + dy, 0, imgHeight - 1);
 						
-						int adjRGB = source.getRGB(newX, newY);
-						adjReds.add(getRed(adjRGB));
-						adjGreens.add(getGreen(adjRGB));
-						adjBlues.add(getBlue(adjRGB));
-						adjAlphas.add(getAlpha(adjRGB));
+						adjReds.add(_source.getRedAt(newX, newY));
+						adjGreens.add(_source.getGreenAt(newX, newY));
+						adjBlues.add(_source.getBlueAt(newX, newY));
 					}
 				}
 				adjReds.sort(Comparator.naturalOrder());
 				adjGreens.sort(Comparator.naturalOrder());
 				adjBlues.sort(Comparator.naturalOrder());
-				adjAlphas.sort(Comparator.naturalOrder());
 				
 				// Get the median (middle value) in the list
 				int newRed = adjReds.get((adjReds.size() - 1) / 2);
 				int newGreen = adjGreens.get((adjGreens.size() - 1) / 2);
 				int newBlue = adjBlues.get((adjBlues.size() - 1) / 2);
-				int newAlpha = adjAlphas.get((adjAlphas.size() - 1) / 2);
 				
-				return toARGB(newRed, newGreen, newBlue, newAlpha);
+				return packPixelData(newRed, newGreen, newBlue);
 			}
 		);
 	
 	@Override
-	public List<PixelTransformer<BufferedImage>> getMainPassTransformers() {
+	public List<PixelTransformer<ImageRaster>> getMainPassTransformers() {
 		return mainPasses;
 	}
 	

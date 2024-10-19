@@ -1,16 +1,13 @@
 package filters.base;
 
-public enum RGBAChannel {
+public enum RGBChannel {
 	RED("Red"),
 	GREEN("Green"),
 	BLUE("Blue"),
-	ALPHA("Alpha"),
-	
-	ALL_EXCEPT_ALPHA("All except Alpha"),
 	ALL("All");
 	
 	String displayName;
-	private RGBAChannel(String displayName) {
+	private RGBChannel(String displayName) {
 		this.displayName = displayName;
 	}
 	

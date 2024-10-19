@@ -1,34 +1,31 @@
 package filters;
 
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
 import filters.base.Filter;
-import filters.base.MultiPassFilterApplicator;
+import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
-import filters.base.PostProcessPixelTransformer;
-import filters.base.PrePass;
 
-import static filters.base.FilterUtils.*;
+import static filters.base.Filter.*;
 
 /**
  * Highlights regions of high contrast in magenta (RGB: 255, 0, 255).
  * Sensitivity threshold is set by strength.
  */
-public final class HighlightContrast implements Filter<BufferedImage> {
-	private static final List<PixelTransformer<BufferedImage>> mainPasses = Arrays.asList(
-			(x, y, argb, prePassData, source, mask, strength) -> {
+public final class HighlightContrast implements Filter<ImageRaster> {
+	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
+			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
 				List<Double> adjValues = new ArrayList<>();
 				for (int dx = -3; dx <= 3; dx++) {
 					for (int dy = -3; dy <= 3; dy++) {
-						int nx = clamp(x + dx, 0, source.getWidth() - 1);
-						int ny = clamp(y + dy, 0, source.getHeight() - 1);
-						double avg = (getRed(source.getRGB(nx, ny))
-										+ getRed(source.getRGB(nx, ny))
-										+ getRed(source.getRGB(nx, ny))) / 3;
+						int nx = clamp(_x + dx, 0, _source.getWidth() - 1);
+						int ny = clamp(_y + dy, 0, _source.getHeight() - 1);
+						double avg = (_source.getRedAt(nx, ny)
+										+ _source.getGreenAt(nx, ny)
+										+ _source.getBlueAt(nx, ny)) / 3;
 						adjValues.add(avg);
 					}
 				}
@@ -36,21 +33,21 @@ public final class HighlightContrast implements Filter<BufferedImage> {
 				double median = adjValues.get((adjValues.size() - 1) / 2);
 				for (int dx = -3; dx <= 3; dx++) {
 					for (int dy = -3; dy <= 3; dy++) {
-						int nx = clamp(x + dx, 0, source.getWidth() - 1);
-						int ny = clamp(y + dy, 0, source.getHeight() - 1);
-						double avg = (getRed(source.getRGB(nx, ny))
-								+ getRed(source.getRGB(nx, ny))
-								+ getRed(source.getRGB(nx, ny))) / 3;
-						if (Math.abs(avg - median) > (255.0 - (255.0 * strength)))
-							return toARGB(255, 0, 255, getAlpha(argb));
+						int nx = clamp(_x + dx, 0, _source.getWidth() - 1);
+						int ny = clamp(_y + dy, 0, _source.getHeight() - 1);
+						double avg = (_source.getRedAt(nx, ny)
+								+ _source.getGreenAt(nx, ny)
+								+ _source.getBlueAt(nx, ny)) / 3;
+						if (Math.abs(avg - median) > (255.0 - (255.0 * _strength)))
+							return packPixelData(255, 0, 255);
 					}
 				}
-				return argb;
+				return packPixelData(_red, _green, _blue);
 			}
 		);
 	
 	@Override
-	public List<PixelTransformer<BufferedImage>> getMainPassTransformers() {
+	public List<PixelTransformer<ImageRaster>> getMainPassTransformers() {
 		return mainPasses;
 	}
 	
