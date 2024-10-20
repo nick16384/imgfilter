@@ -8,7 +8,6 @@ import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
 
 import static filters.base.Filter.*;
-import static filters.base.UnsignedIntOperations.*;
 
 /**
  * Very similar to TurboColor2.0, but has a different channel modifier.
@@ -19,9 +18,9 @@ public final class Brightness implements Filter<ImageRaster> {
 			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
 				double brightModifier = _strength + 0.5;
 				
-				int newRed = (int)safe_mul(_red, brightModifier);
-				int newGreen = (int)safe_mul(_green, brightModifier);
-				int newBlue = (int)safe_mul(_blue, brightModifier);
+				int newRed = (int)(_red * brightModifier);
+				int newGreen = (int)(_green * brightModifier);
+				int newBlue = (int)(_blue * brightModifier);
 				
 				return packPixelData(newRed, newGreen, newBlue);
 			}

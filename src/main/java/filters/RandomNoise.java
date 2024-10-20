@@ -6,7 +6,7 @@ import java.util.List;
 import filters.base.Filter;
 import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
-import filters.base.UnsignedIntOperations;
+import filters.base.UInt;
 
 import static filters.base.Filter.*;
 
@@ -19,10 +19,10 @@ public final class RandomNoise implements Filter<ImageRaster> {
 			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
 				int rndStrength = (int)(ImageRaster.MAX_SAMPLE_VALUE * _strength);
 				int newRed, newGreen, newBlue;
-				// TODO: Check addition/subtraction with "uint" works properly
-				newRed = UnsignedIntOperations.safe_add(_red, randomInt(rndStrength));
-				newGreen = UnsignedIntOperations.safe_add(_green, randomInt(rndStrength));
-				newBlue = UnsignedIntOperations.safe_add(_blue, randomInt(rndStrength));
+				// FIXME: Add clamped addition
+				newRed = (_red + randomInt(rndStrength));
+				newGreen = (_green + randomInt(rndStrength));
+				newBlue = (_blue + randomInt(rndStrength));
 				/*newRed = clamp0MAX(_red + clamp(randomInt(rndStrength), -0x100, 0xFF));
 				newGreen = clamp0MAX(_green + clamp(randomInt(rndStrength), -0x100, 0xFF));
 				newBlue = clamp0MAX(_blue + clamp(randomInt(rndStrength), -0x100, 0xFF));*/

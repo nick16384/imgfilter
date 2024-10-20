@@ -279,7 +279,8 @@ public class GUIHelper extends Application {
     		App.importImage(newImageFile.getAbsolutePath(), null);
     		img.setImage(convertToFxImage(App.filterFrontend.getLiveImage()));
     		rescaleImageView(img, IMG_TARGET_SCALE_X);
-    		rescaleImageView(maskImg, MASK_TARGET_SCALE_X, img.getFitHeight());
+    		if (maskImg != null)
+    			rescaleImageView(maskImg, MASK_TARGET_SCALE_X, img.getFitHeight());
     	});
     	importMaskButton.setOnAction(event -> {
     		System.out.println("Importing new mask...");
@@ -436,6 +437,11 @@ public class GUIHelper extends Application {
 	// FIXME: Test if this method is 100% correctly working
 	// TODO: Add multithreading
     private static Image convertToFxImage(BufferedImage image) {
+    	int sourceBitsPerChannel =
+    			Integer.divideUnsigned(
+    					image.getColorModel().getPixelSize(), image.getColorModel().getNumComponents());
+    	int targetBitsPerChannel = 8;
+    	int channelBitsDivisor = (int)Math.pow(2, sourceBitsPerChannel - targetBitsPerChannel);
         WritableImage wr = null;
         if (image != null) {
             wr = new WritableImage(image.getWidth(), image.getHeight());
@@ -444,9 +450,9 @@ public class GUIHelper extends Application {
                 for (int y = 0; y < image.getHeight(); y++) {
                 	int[] rgb = image.getRaster().getPixel(x, y, (int[])(null));
                 	// Only the last 8 bits of the color components are relevant
-                	int red = (int)(((long)rgb[0] + (Integer.MAX_VALUE / 2)) / 65536 - (Integer.MAX_VALUE / 2)) & 0x000000FF;
-                	int green = (rgb[1] / 65536) & 0x000000FF;
-                	int blue = (rgb[2] / 65536) & 0x000000FF;
+                	int red = (Integer.divideUnsigned(rgb[0], channelBitsDivisor)) & 0x000000FF;
+                	int green = (Integer.divideUnsigned(rgb[1], channelBitsDivisor)) & 0x000000FF;
+                	int blue = (Integer.divideUnsigned(rgb[2], channelBitsDivisor)) & 0x000000FF;
                 	int fxARGB = 0xFF000000 | (red << 16) | (green << 8) | blue;
                     pw.setArgb(x, y, fxARGB);
                 }
@@ -465,6 +471,10 @@ public class GUIHelper extends Application {
     	img.setFitWidth(scaledWidth);
     }
 	private static void rescaleImageView(ImageView img, double targetScaleX, double targetScaleY) {
+		if (img == null || img.getImage() == null) {
+			System.err.println("FX Image is null, cannot transform its size.");
+			return;
+		}
 		double imgWidth = img.getImage().getWidth();
 		double imgHeight = img.getImage().getHeight();
     	double imgScaleX = (double)targetScaleX / imgWidth;

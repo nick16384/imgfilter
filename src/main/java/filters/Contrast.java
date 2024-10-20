@@ -9,7 +9,6 @@ import filters.base.PixelTransformer;
 import filters.base.PrePass;
 
 import static filters.base.Filter.*;
-import static filters.base.UnsignedIntOperations.*;
 
 /**
  * [Work in progress] Increases image contrast with an adjustment curve
@@ -61,7 +60,7 @@ public final class Contrast implements Filter<ImageRaster> {
 					// Higher invDeviance ==> lower contrast
 					double gammaTransformResult =
 							gammaTransform((double)channelColor / ImageRaster.MAX_SAMPLE_VALUE, _strength);
-					int newChannelColor = (int)safe_mul(channelColor, gammaTransformResult);
+					int newChannelColor = (int)(channelColor * gammaTransformResult);
 					
 					switch (i) {
 					case 0: newRed = newChannelColor; break;

@@ -8,7 +8,7 @@ import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
 
 import static filters.base.Filter.*;
-import static filters.base.UnsignedIntOperations.*;
+import static filters.base.UInt.*;
 
 /**
  * A sharpening filter.
@@ -46,9 +46,10 @@ public final class Sharpening implements Filter<ImageRaster> {
 				detailGreen -= 20;
 				detailBlue -= 20;
 				
-				int newRed = safe_add(_red, detailRed);
-				int newGreen = safe_add(_green, detailGreen);
-				int newBlue = safe_add(_blue, detailBlue);
+				// FIXME: Add clamped additon
+				int newRed = (_red + detailRed);
+				int newGreen = (_green + detailGreen);
+				int newBlue = (_blue + detailBlue);
 				
 				return packPixelData(newRed, newGreen, newBlue);
 			}

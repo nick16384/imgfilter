@@ -17,33 +17,27 @@ public class ImageRaster extends WritableRaster {
 	public static final ColorModel DEFAULT_COLOR_MODEL =
 			new ComponentColorModel(
 					ColorSpace.getInstance(ColorSpace.CS_LINEAR_RGB),
-					null/*new int[] {32, 32, 32}*/,
+					new int[] {32, 32, 32},
 					false,
 					false,
 					ColorModel.OPAQUE,
 					DataBuffer.TYPE_INT);
 	/**
-	 * Highest possible value for pixel channel values (e.g. 255 for 8 bits per channel).
-	 * Note that the use of an unsigned integer would be much more appropriate here, but
-	 * since java doesn't implement this feature, there would be a lot of headaches when treating
-	 * ints as uints, so this implementation sticks with Integer.MIN_VALUE as minimum sample
-	 * value and Integer.MAX_VALUE as maximum value.
+	 * Highest possible value for pixel channel values (e.g. 511 for 8 bits per channel).
+	 * Note that the usual signed int of Java is treated like an unsigned int here.
 	 */
-	public static final int MAX_SAMPLE_VALUE = 0x7FFFFFFF;
+	public static final int MAX_SAMPLE_VALUE = 0xFFFFFFFF;
 	/**
-	 * Lowest possible value for pixel channel values (e.g. -256 for 8 bits per channel).
-	 * Note that the use of an unsigned integer would be much more appropriate here, but
-	 * since java doesn't implement this feature, there would be a lot of headaches when treating
-	 * ints as uints, so this implementation sticks with Integer.MIN_VALUE as minimum sample
-	 * value and Integer.MAX_VALUE as maximum value.
+	 * Lowest possible value for pixel channel values (e.g. 0 for 8 bits per channel).
+	 * Note that the usual signed int of Java is treated like an unsigned int here.
 	 */
-	public static final int MIN_SAMPLE_VALUE = 0xFFFFFFFF;
+	public static final int MIN_SAMPLE_VALUE = 0x00000000;
 	public static final int INDEX_SAMPLE_RED = 0;
 	public static final int INDEX_SAMPLE_GREEN = 1;
 	public static final int INDEX_SAMPLE_BLUE = 2;
 	
 	public ImageRaster(BufferedImage fromImage) {
-		this(createCompatibleImage(fromImage).getRaster());
+		this(convertToCompatibleColorModel(fromImage, DEFAULT_COLOR_MODEL).getRaster());
 	}
 	
 	private ImageRaster(WritableRaster fromRaster) {
@@ -133,12 +127,14 @@ public class ImageRaster extends WritableRaster {
 			scaleWidth = (targetWidth + 1.0) / this.getWidth();
 		if (this.getHeight() * scaleHeight < targetHeight)
 			scaleHeight = (targetHeight + 1.0) / this.getHeight();
+		System.out.println("SW: " + scaleWidth + ", SH: " + scaleHeight);
+		if (scaleWidth == 1.0 && scaleHeight == 1.0)
+			return this.createDeepCopy();
+		
 		transform.scale(scaleWidth, scaleHeight);
 		AffineTransformOp scaleOp = 
 				new AffineTransformOp(transform, transformOp);
-		ImageRaster rescaledRaster = new ImageRaster(targetWidth, targetHeight);
-		scaleOp.filter(this, rescaledRaster);
-		return rescaledRaster;
+		return new ImageRaster(scaleOp.filter(this, null));
 	}
 	
 	public BufferedImage toBufferedImage() {
@@ -152,13 +148,13 @@ public class ImageRaster extends WritableRaster {
 	 */
 	// TODO: Add multithreading
 	// TODO: Move this method to a more appropriate place.
-	public static BufferedImage createCompatibleImage(BufferedImage source) {
+	public static BufferedImage convertToCompatibleColorModel(BufferedImage source, ColorModel newModel) {
 		int w = source.getWidth();
 		int h = source.getHeight();
 		
 		BufferedImage result = new BufferedImage(
-				DEFAULT_COLOR_MODEL,
-				DEFAULT_COLOR_MODEL.createCompatibleWritableRaster(w, h),
+				newModel,
+				newModel.createCompatibleWritableRaster(w, h),
 				false,
 				null);
 		/*Graphics2D g = result.createGraphics();
@@ -167,24 +163,25 @@ public class ImageRaster extends WritableRaster {
 		g.dispose();*/
 		// Manual copy, method above does not work
 		int numSourceComponents = source.getColorModel().getNumComponents();
-		System.out.println("Copy source components: " + numSourceComponents);
+		int numDestComponents = newModel.getNumComponents();
+		int sourceBitsPerChannel =
+				source.getColorModel().getPixelSize() / numSourceComponents;
+		int destBitsPerChannel = 
+				newModel.getPixelSize() / numDestComponents;
+		int bitsPerChannelDifference =
+				destBitsPerChannel - sourceBitsPerChannel;
+		System.out.println("Copy components: " + numSourceComponents + " -> " + numDestComponents);
+		System.out.println("Copy bits/channel: " + sourceBitsPerChannel + " -> " + destBitsPerChannel);
 		for (int x = 0; x < w; x++) {
 			for (int y = 0; y < h; y++) {
 				int[] sourcePixel = source.getRaster().getPixel(x, y, new int[numSourceComponents]);
-				int[] sourcePixelConverted = new int[numSourceComponents];
+				int[] sourcePixelConverted = new int[numDestComponents];
 				
-				long maxSample8Bit = 65536;
-				long maxSample32Bit = MAX_SAMPLE_VALUE * 2;
 				// Iterate over each color component (usually red, green and blue)
-				for (int i = 0; i < numSourceComponents; i++) {
-					long sourceSampleUnsigned = sourcePixel[i] + (Integer.MAX_VALUE / 2);
-					double sampleFrac = (double)sourceSampleUnsigned / (double)maxSample8Bit;
-					long sourceSampleConvertedUnsigned = (long)(maxSample32Bit * sampleFrac);
-					sourceSampleConvertedUnsigned -= (Integer.MAX_VALUE / 2);
-					int sourceSampleConverted = (int)sourceSampleConvertedUnsigned;
-					
-					double wFrac = (double)x / w;
-					sourcePixelConverted[i] = (int)(wFrac * 0x00FFFFFF);
+				for (int i = 0; i < numDestComponents; i++) {
+					int sourceSample = sourcePixel[i];
+					sourceSample *= (int)Math.pow(2, bitsPerChannelDifference);
+					sourcePixelConverted[i] = sourceSample;
 				}
 				
 				//result.getRaster().setPixel(x, y, new int[] {0x00000001, 0x90000000, 0x8000000});

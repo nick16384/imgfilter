@@ -8,7 +8,7 @@ import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
 
 import static filters.base.Filter.*;
-import static filters.base.UnsignedIntOperations.*;
+import static filters.base.UInt.*;
 
 /**
  * Multiplies channel values with 0.0 to 2.0 depending on strength.
@@ -20,10 +20,11 @@ public final class TurboColor2 implements Filter<ImageRaster> {
 	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
 			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
 				int str = (int)(2.0 * _strength);
+				// FIXME: Add clamped addition and check double*int multiplication
 				return packPixelData(
-						safe_mul(str, _red),
-						safe_mul(str, _green),
-						safe_mul(str, _blue));
+						(str * _red),
+						(str * _green),
+						(str * _blue));
 			}
 		);
 	

@@ -51,15 +51,13 @@ public class ImgFilterFrontend {
 		
 		this.imgFile = imgIn;
 		BufferedImage maybeIncompatibleImage = ImageIO.read(imgIn);
-		this.image = ImageRaster.createCompatibleImage(maybeIncompatibleImage);
+		this.image =
+				ImageRaster.convertToCompatibleColorModel(maybeIncompatibleImage, ImageRaster.DEFAULT_COLOR_MODEL);
 		
 		imgHeight = image.getHeight();
 		imgWidth = image.getWidth();
 		System.out.println("CMIN: " + maybeIncompatibleImage.getColorModel());
 		System.out.println("CM  : " + image.getColorModel());
-		
-		System.out.println(maybeIncompatibleImage.getRaster().getPixel(500, 500, new int[3])[0]);
-		System.out.println(image.getRaster().getPixel(500, 500, new int[3])[0]);
 		
 		// Empty BufferedImage with 16-bit depth per pixel sample (48 bit per pixel)
 		/*BufferedImage emptyImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
@@ -260,7 +258,7 @@ public class ImgFilterFrontend {
 		
 		this.maskFile = maskIn;
 		if (useNullMask)
-			this.mask = new BufferedImage(imgWidth, imgHeight, BufferedImage.TYPE_INT_ARGB);
+			this.mask = new ImageRaster(imgWidth, imgHeight).toBufferedImage();
 		else
 			this.mask = ImageIO.read(maskIn);
 	}
