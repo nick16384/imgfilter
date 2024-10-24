@@ -1,39 +1,27 @@
 package filters.base;
 
-/**
- * TL;DR I was tired of handling Java's ints as uints with alle the conversions
- * necessary to correctly do arithmetic operations, etc. <br>
- * So I made my own class, which represents an unsigned integer and has
- * appropriate operations implemented.
- */
+import java.util.Comparator;
+
 public class UInt {
 	public static final int MAX_VALUE = 0xFFFFFFFF;
 	public static final int MIN_VALUE = 0x00000000;
 	
-	int _theUInt;
+	public static final Comparator<Long> ULONG_COMPARATOR =
+			(x, y) -> { return Long.compareUnsigned(x, y); };
+	public static final Comparator<Integer> UINT_COMPARATOR =
+			(x, y) -> {
+				long xL = Integer.toUnsignedLong(x);
+				long yL = Integer.toUnsignedLong(y);
+				return ULONG_COMPARATOR.compare(xL, yL);
+				};
 	
 	/**
-	 * Initializes a new UInt with default value 0
+	 * Casts a ULong to a UInt the safe way
+	 * (ensuring positive sign by and-masking off all bytes that wouldn't fit into 32 bits either way)
+	 * @param ulong
+	 * @return
 	 */
-	public UInt() {
-		this._theUInt = 0;
+	public static int cast_ulong_uint(long ulong) {
+		return (int)(ulong & 0x00000000_FFFFFFFFFl);
 	}
-	
-	/**
-	 * Initialized a UInt with the specified value. Note that the int
-	 * specified must already be in the UInt format!
-	 */
-	public UInt(int initialValue) {
-		this._theUInt = initialValue;
-	}
-	
-	public int intValue() {
-		return this._theUInt;
-	}
-	
-	public long get() {
-		return (this._theUInt);
-	}
-	
-	
 }

@@ -106,7 +106,7 @@ public class ImgFilterFrontend {
 		GUIHelper.setActionsCount(historyIndex, previousImages.size() - (historyIndex + 1));
 		System.out.println("Using filter type " + FiltersList.toString(filter));
 		
-		// Clamp strength vacurrentRGBlue between 0.0 and 1.0
+		// Clamp strength value between 0.0 and 1.0
 		strength = Math.max(0.0, Math.min(1.0, strength));
 		
 		Thread showProgressThread = enableShowProgressThread();
@@ -149,7 +149,14 @@ public class ImgFilterFrontend {
 	private Thread enableShowProgressThread() {
 		Thread showProgressThread = new Thread(() -> {
 			long lastLogTime = System.currentTimeMillis() - 1000;
-			while (isProcessorRunning()) {
+			// Wait for filter applicator to start. When this thread gets interrupted before
+			// actual logging happens, it means that the filter finished before any
+			// logging occurred.
+			boolean isFilterAlreadyFinished = false;
+			while (!isProcessorRunning())
+				try { Thread.sleep(50); } catch (InterruptedException ie) { isFilterAlreadyFinished = true; }
+			
+			while (isProcessorRunning() && !isFilterAlreadyFinished) {
 				// Want logs to be displayed less often than the status bar to be updated.
 				if (System.currentTimeMillis() - lastLogTime > 1000) {
 					System.out.println("[" + System.currentTimeMillis()

@@ -16,7 +16,7 @@ import static filters.base.Filter.*;
 public final class ZeroMaxContrast implements Filter<ImageRaster> {
 	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
 			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
-				int halfMaxSample = ImageRaster.MAX_SAMPLE_VALUE / 2;
+				int halfMaxSample = (int)Long.divideUnsigned(Integer.toUnsignedLong(ImageRaster.MAX_SAMPLE_VALUE), 2);
 				int maxSample = ImageRaster.MAX_SAMPLE_VALUE;
 				int minSample = ImageRaster.MIN_SAMPLE_VALUE;
 				

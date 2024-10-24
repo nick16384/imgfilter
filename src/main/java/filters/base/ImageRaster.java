@@ -27,11 +27,13 @@ public class ImageRaster extends WritableRaster {
 	 * Note that the usual signed int of Java is treated like an unsigned int here.
 	 */
 	public static final int MAX_SAMPLE_VALUE = 0xFFFFFFFF;
+	public static final long MAX_SAMPLE_VALUE_ULONG = Integer.toUnsignedLong(MAX_SAMPLE_VALUE);
 	/**
 	 * Lowest possible value for pixel channel values (e.g. 0 for 8 bits per channel).
 	 * Note that the usual signed int of Java is treated like an unsigned int here.
 	 */
 	public static final int MIN_SAMPLE_VALUE = 0x00000000;
+	public static final long MIN_SAMPLE_VALUE_ULONG = Integer.toUnsignedLong(MIN_SAMPLE_VALUE);
 	public static final int INDEX_SAMPLE_RED = 0;
 	public static final int INDEX_SAMPLE_GREEN = 1;
 	public static final int INDEX_SAMPLE_BLUE = 2;
@@ -61,11 +63,20 @@ public class ImageRaster extends WritableRaster {
 		// TODO: Maybe use getSample(x, y, band)
 		return getPixelRGBAt(x, y)[INDEX_SAMPLE_RED];
 	}
+	public long getRedAt_UL(int x, int y) {
+		return Integer.toUnsignedLong(getRedAt(x, y));
+	}
 	public int getGreenAt(int x, int y) {
 		return getPixelRGBAt(x, y)[INDEX_SAMPLE_GREEN];
 	}
+	public long getGreenAt_UL(int x, int y) {
+		return Integer.toUnsignedLong(getGreenAt(x, y));
+	}
 	public int getBlueAt(int x, int y) {
 		return getPixelRGBAt(x, y)[INDEX_SAMPLE_BLUE];
+	}
+	public long getBlueAt_UL(int x, int y) {
+		return Integer.toUnsignedLong(getBlueAt(x, y));
 	}
 	
 	public void setPixelRGBAt(int x, int y, int[] newPixelData) {

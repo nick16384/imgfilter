@@ -409,7 +409,7 @@ public class GUIHelper extends Application {
     	double scaledHeight = App.filterFrontend.imgHeight * imgScale;
         Scene scene = new Scene(root, scaledWidth + 500, scaledHeight + 50);
         primaryStage.setScene(scene);
-        primaryStage.setTitle("Image filter v2024.09A");
+        primaryStage.setTitle("Image filter " + App.VERSION_STRING);
         primaryStage.show();
         
         // TODO: Future GUI elements to add:
@@ -517,7 +517,11 @@ public class GUIHelper extends Application {
 			filterPassNumCurrent.set(passNum);
 			filterPassNumMax.set(maxPassNum);
 			if (passNum != -1)
-				filterPassNumProgressBar.setProgress((double)passNum / maxPassNum);
+				/* This +0.0001 seems to be absolutely necessary to solve some floating point shenanigans, which
+				would otherwise indicate a progress of 0%, EVEN THOUGH 1.0 / 1.0 is 1.0 when
+				printed with printf.
+				Idk whats wrong at this point. It works, so I won't change it until it stops working again.*/
+				filterPassNumProgressBar.setProgress((double)passNum / maxPassNum + 0.0001);
 			else
 				filterPassNumProgressBar.setProgress(0.0);
 			

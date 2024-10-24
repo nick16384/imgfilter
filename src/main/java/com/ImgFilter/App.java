@@ -6,6 +6,7 @@ import java.util.Arrays;
 
 
 public class App {
+	public static final String VERSION_STRING = "v2024.10A";
 	public static final boolean LOG_DEBUG_PIXEL_TRANSFORM = false;
 	public static final int ARGS_INDEX_INPUT_IMAGE_FILE = 0;
 	public static final int ARGS_INDEX_OUTPUT_IMAGE_FILE = 2;

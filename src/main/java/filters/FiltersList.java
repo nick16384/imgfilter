@@ -2,7 +2,6 @@ package filters;
 
 import static java.util.Map.entry;
 
-import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -12,7 +11,6 @@ import java.util.stream.Stream;
 
 import filters.base.Filter;
 import filters.base.ImageRaster;
-import filters.base.MultiPassFilterApplicator;
 
 /**
  * Contains a map from filter names to MultiPassFilters.

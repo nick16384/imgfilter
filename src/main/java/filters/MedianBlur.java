@@ -8,6 +8,7 @@ import java.util.List;
 import filters.base.Filter;
 import filters.base.ImageRaster;
 import filters.base.PixelTransformer;
+import filters.base.UInt;
 
 import static filters.base.Filter.*;
 
@@ -29,17 +30,17 @@ public final class MedianBlur implements Filter<ImageRaster> {
 				for (int dx = -delta; dx <= delta; dx++) {
 					for (int dy = -delta; dy <= delta; dy++) {
 						// Prevent out of range pixel coordinates
-						int newX = clamp(_x + dx, 0, imgWidth - 1);
-						int newY = clamp(_y + dy, 0, imgHeight - 1);
+						int newX = clamp_signed(_x + dx, 0, imgWidth - 1);
+						int newY = clamp_signed(_y + dy, 0, imgHeight - 1);
 						
 						adjReds.add(_source.getRedAt(newX, newY));
 						adjGreens.add(_source.getGreenAt(newX, newY));
 						adjBlues.add(_source.getBlueAt(newX, newY));
 					}
 				}
-				adjReds.sort(Comparator.naturalOrder());
-				adjGreens.sort(Comparator.naturalOrder());
-				adjBlues.sort(Comparator.naturalOrder());
+				adjReds.sort(UInt.UINT_COMPARATOR);
+				adjGreens.sort(UInt.UINT_COMPARATOR);
+				adjBlues.sort(UInt.UINT_COMPARATOR);
 				
 				// Get the median (middle value) in the list
 				int newRed = adjReds.get((adjReds.size() - 1) / 2);

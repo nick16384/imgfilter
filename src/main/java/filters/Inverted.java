@@ -15,9 +15,9 @@ import static filters.base.Filter.*;
 public final class Inverted implements Filter<ImageRaster> {
 	private static final List<PixelTransformer<ImageRaster>> mainPasses = Arrays.asList(
 			(_x, _y, _red, _green, _blue, _prePassData, _source, _mask, _strength) -> {
-				int newRed = 255 - _red;
-				int newGreen = 255 - _green;
-				int newBlue = 255 - _blue;
+				int newRed = (int)(ImageRaster.MAX_SAMPLE_VALUE_ULONG - _red);
+				int newGreen = (int)(ImageRaster.MAX_SAMPLE_VALUE_ULONG - _green);
+				int newBlue = (int)(ImageRaster.MAX_SAMPLE_VALUE_ULONG - _blue);
 				return packPixelData(newRed, newGreen, newBlue);
 			}
 		);
