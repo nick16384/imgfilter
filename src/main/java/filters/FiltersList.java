@@ -28,7 +28,7 @@ public final class FiltersList {
 							entry(new TurboColor2().getName(),         new TurboColor2()),
 							entry(new Brightness().getName(),          new Brightness()),
 							entry(new TurboTurboTM().getName(),        new TurboTurboTM()),
-							entry(new ChannelShift().getName(), new ChannelShift()),
+							entry(new ChannelShift().getName(),        new ChannelShift()),
 							entry(new MaxBlur().getName(),             new MaxBlur()),
 							entry(new MedianBlur().getName(),          new MedianBlur()),
 							entry(new Contrast().getName(),            new Contrast()),
@@ -36,7 +36,9 @@ public final class FiltersList {
 							entry(new HighlightContrast().getName(),   new HighlightContrast()),
 							entry(new FlipLR().getName(),              new FlipLR()),
 							entry(new FlipUD().getName(),              new FlipUD()),
-							entry(new Sharpening().getName(),          new Sharpening())
+							entry(new Sharpening().getName(),          new Sharpening()),
+							entry(new ReducePartial().getName(),       new ReducePartial()),
+							entry(new Saturation().getName(),          new Saturation())
 							));
 	
 	// TODO: Make subclass MaskedMultiPassFilter

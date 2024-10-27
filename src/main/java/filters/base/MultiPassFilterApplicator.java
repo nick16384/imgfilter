@@ -322,7 +322,7 @@ public class MultiPassFilterApplicator {
 	 */
 	public static BufferedImage getLiveImage() {
 		if (sourceLive == null)
-			return new ImageRaster(1, 1).toBufferedImage();
+			return null;
 		return sourceLive.createDeepCopy().toBufferedImage();
 	}
 	

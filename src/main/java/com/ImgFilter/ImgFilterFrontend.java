@@ -1,9 +1,15 @@
 package com.ImgFilter;
 
+import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.ComponentColorModel;
+import java.awt.image.DataBuffer;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.imageio.ImageIO;
@@ -20,6 +26,35 @@ import filters.base.RGBChannel;
  */
 
 public class ImgFilterFrontend {
+	public static final ColorModel WRITE_OUT_COLOR_MODEL_24BIT =
+			new ComponentColorModel(
+					ColorSpace.getInstance(ColorSpace.CS_LINEAR_RGB),
+					new int[] {8, 8, 8},
+					false,
+					false,
+					ColorModel.OPAQUE,
+					DataBuffer.TYPE_INT);
+	public static final ColorModel WRITE_OUT_COLOR_MODEL_48BIT =
+			new ComponentColorModel(
+					ColorSpace.getInstance(ColorSpace.CS_LINEAR_RGB),
+					new int[] {16, 16, 16},
+					false,
+					false,
+					ColorModel.OPAQUE,
+					DataBuffer.TYPE_INT);
+	public static final ColorModel WRITE_OUT_COLOR_MODEL_72BIT =
+			new ComponentColorModel(
+					ColorSpace.getInstance(ColorSpace.CS_LINEAR_RGB),
+					new int[] {24, 24, 24},
+					false,
+					false,
+					ColorModel.OPAQUE,
+					DataBuffer.TYPE_INT);
+	public static final List<ColorModel> AVAILABLE_WRITE_OUT_COLOR_MODELS = Arrays.asList(
+			WRITE_OUT_COLOR_MODEL_24BIT,
+			WRITE_OUT_COLOR_MODEL_48BIT,
+			WRITE_OUT_COLOR_MODEL_72BIT);
+	
 	Filter<ImageRaster> currentFilter;
 	private final File imgFile;
 	private File maskFile;
@@ -46,7 +81,7 @@ public class ImgFilterFrontend {
 		if (!imgIn.exists() || !imgIn.isFile())
 			throw new IOException("Input file does not exist.");
 		
-		if (!isValidImageFileSuffix(imgIn))
+		if (!ImageFileExtension.isValidImageFileExtension(imgIn))
 			throw new IOException("Input file is not an image file. (File name suffix)");
 		
 		this.imgFile = imgIn;
@@ -78,20 +113,6 @@ public class ImgFilterFrontend {
 	 */
 	public ImgFilterFrontend(File imgIn) throws IOException {
 		this(imgIn, null);
-	}
-	private static boolean isValidImageFileSuffix(File file) {
-		// Check for valid file name suffix
-		boolean validSuffix = false;
-		String[] possibleFileSuffixes = new String[] { ".bmp", ".jpg", ".jpeg", ".png", ".tif" };
-		for (String suffix : possibleFileSuffixes) {
-			System.out.println("Checking suffix " + suffix);
-			if (file.getAbsolutePath().endsWith(suffix)) {
-				System.out.println("Suffix " + suffix + " is valid on " + file.getAbsolutePath());
-				validSuffix = true;
-				break;
-			}
-		}
-		return validSuffix;
 	}
 	
 	public void applyFilter(Filter<ImageRaster> filter,
@@ -218,19 +239,46 @@ public class ImgFilterFrontend {
 		GUIHelper.setActionsCount(historyIndex, previousImages.size() - (historyIndex + 1));
 	}
 	
-	public void saveFileTo(File out) throws IOException {
-		System.out.println("Attempting to find usable file name...");
+	public void saveFileToFolder(File outFolder, ColorModel writeOutColorModel, ImageFileExtension extension) throws IOException {
+		// Code for not overwriting files but instead finding a usable file name by appending
+		// ascending numbers at the end of the file name.
+		// Mostly obsolete when using file chooser GUI, because it asks for overwriting files.
+		/*System.out.println("Attempting to find usable file name...");
 		File outNew = null;
 		for (int i = 1; outNew == null || outNew.exists(); i++) {
 			String outNewPath = out.getAbsolutePath().substring(0, out.getAbsolutePath().length() - 4);
 			outNewPath += "(" + i + ").bmp";
 			outNew = new File(outNewPath);
-		}
+		}*/
 		
-		System.out.println("Saving file to: " + outNew.getAbsolutePath());
-		outNew.createNewFile();
-		ImageIO.write(image, "bmp", outNew);
-		System.out.println("Saved.");
+		System.out.println("Saving to folder: " + outFolder.getAbsolutePath());
+		System.out.println("Internal file name: " + imgFile.getName());
+		System.out.println("Using file extension: " + extension);
+		
+		// File system file separator string
+		String fsep = FileSystems.getDefault().getSeparator();
+		String outFileStr = outFolder.getAbsolutePath();
+		if (!outFileStr.endsWith(fsep))
+			outFileStr += fsep;
+		outFileStr += imgFile.getName() + "_out";
+		outFileStr += extension.getAllFileExtensions()[0];
+		System.out.println("Saving to file: " + outFileStr);
+		
+		File outFile = new File(outFileStr);
+		
+		System.out.println("Creating empty file.");
+		outFile.createNewFile();
+		System.out.println("Created new empty file.");
+		
+		// TODO: Try writing with different color model (24 bit, 16 bit or 8 bit depending on user)
+		System.out.println("Converting color models.");
+		BufferedImage imageWithWriteOutColorModel = ImageRaster.convertToCompatibleColorModel(image, writeOutColorModel);
+		System.out.println("Writing image.");
+		boolean writeResult = ImageIO.write(imageWithWriteOutColorModel, extension.getAllFileExtensions()[0].substring(1), outFile);
+		if (!writeResult)
+			System.err.println("No appropriate image writer found.");
+		else
+			System.out.println("Saved.");
 	}
 	
 	public File getImageFile() {
@@ -258,7 +306,7 @@ public class ImgFilterFrontend {
 			System.err.println("Warning: Mask file does not exist. Using null mask.");
 			useNullMask = true;
 		}
-		else if (maskIn != null && !isValidImageFileSuffix(maskIn)) {
+		else if (maskIn != null && !ImageFileExtension.isValidImageFileExtension(maskIn)) {
 			System.err.println("Warning: Mask file is not an image file. (File name suffix). Using null mask.");
 			useNullMask = true;
 		}

@@ -9,7 +9,7 @@ import filters.base.PixelTransformer;
 import filters.base.UInt;
 
 import static filters.base.Filter.*;
-import static filters.base.UInt.*;
+import static java.lang.Integer.*;
 
 /**
  * A sharpening filter.
@@ -23,27 +23,32 @@ public final class Sharpening implements Filter<ImageRaster> {
 				long avgRed = 0;
 				long avgGreen = 0;
 				long avgBlue = 0;
+				
+				int[] curRGB = new int[3];
 				int delta = (int)(50.0 * _strength);
 				for (int dx = -delta; dx <= delta; dx++) {
 					int nx = clamp_signed(_x + dx, 0, _source.getWidth() - 1);
 					for (int dy = -delta; dy <= delta; dy++) {
 						int ny = clamp_signed(_y + dy, 0, _source.getHeight() - 1);
 						
-						avgRed += _source.getRedAt_UL(nx, ny);
-						avgGreen += _source.getGreenAt_UL(nx, ny);
-						avgBlue += _source.getBlueAt_UL(nx, ny);
+						// Calling getPixelRGBAt() once and then converting to unsigned longs
+						// gives a huge performance boost over calling get[Color]At_UL() for each channel.
+						curRGB = _source.getPixelRGBAt(nx, ny);
+						avgRed += toUnsignedLong(curRGB[0]);
+						avgGreen += toUnsignedLong(curRGB[1]);
+						avgBlue += toUnsignedLong(curRGB[2]);
 					}
 				}
 				int pixelCountI = ((2 * delta) + 1) * ((2 * delta) + 1);
-				long pixelCount = Integer.toUnsignedLong(pixelCountI);
+				long pixelCount = toUnsignedLong(pixelCountI);
 				avgRed = Long.divideUnsigned(avgRed, pixelCount);
 				avgGreen = Long.divideUnsigned(avgGreen, pixelCount);
 				avgBlue = Long.divideUnsigned(avgBlue, pixelCount);
 				
 				// Detail values are SIGNED!
-				long detailRed = Integer.toUnsignedLong(_red) - avgRed;
-				long detailGreen = Integer.toUnsignedLong(_green) - avgGreen;
-				long detailBlue = Integer.toUnsignedLong(_blue) - avgBlue;
+				long detailRed = toUnsignedLong(_red) - avgRed;
+				long detailGreen = toUnsignedLong(_green) - avgGreen;
+				long detailBlue = toUnsignedLong(_blue) - avgBlue;
 				
 				// FIXME: Fix these values or take them out entirely
 				// Make mask a little darker to avoid overly bright images.
@@ -51,11 +56,11 @@ public final class Sharpening implements Filter<ImageRaster> {
 				//detailGreen -= 20;
 				//detailBlue -= 20;
 				
-				long newRed = Integer.toUnsignedLong(_red) + detailRed;
+				long newRed = toUnsignedLong(_red) + detailRed;
 				newRed = clamp_signed(newRed, ImageRaster.MIN_SAMPLE_VALUE_ULONG, ImageRaster.MAX_SAMPLE_VALUE_ULONG);
-				long newGreen = Integer.toUnsignedLong(_green) + detailGreen;
+				long newGreen = toUnsignedLong(_green) + detailGreen;
 				newGreen = clamp_signed(newGreen, ImageRaster.MIN_SAMPLE_VALUE_ULONG, ImageRaster.MAX_SAMPLE_VALUE_ULONG);
-				long newBlue = Integer.toUnsignedLong(_blue) + detailBlue;
+				long newBlue = toUnsignedLong(_blue) + detailBlue;
 				newBlue = clamp_signed(newBlue, ImageRaster.MIN_SAMPLE_VALUE_ULONG, ImageRaster.MAX_SAMPLE_VALUE_ULONG);
 				
 				

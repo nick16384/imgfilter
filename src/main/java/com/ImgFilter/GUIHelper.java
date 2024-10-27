@@ -1,6 +1,7 @@
 package com.ImgFilter;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
@@ -54,7 +56,9 @@ import javafx.util.StringConverter;
  */
 public class GUIHelper extends Application {
 	public static final int IMG_TARGET_SCALE_X = 1024;
+	public static final int IMG_MAX_SCALE_Y = 900;
 	public static final int MASK_TARGET_SCALE_X = 1024;
+	public static final int MASK_MAX_SCALE_Y = 900;
 	private Stage primaryStage;
 	
 	// Which pass group is running (pre, main)?
@@ -69,7 +73,7 @@ public class GUIHelper extends Application {
 	private static Button undoButton;
 	private static Button redoButton;
 	private static volatile boolean filterCancelRequested = false;
-	private static FileChooser imageExporter;
+	private static DirectoryChooser imageExporter;
 	
 	public static void launchGUI() {
 		launch();
@@ -84,7 +88,7 @@ public class GUIHelper extends Application {
     	// If image loading fails, print a stacktrace
     	if (img.getImage().isError())
     		img.getImage().getException().printStackTrace();
-    	rescaleImageView(img, IMG_TARGET_SCALE_X);
+    	rescaleImageViewWithMaxY(img, IMG_TARGET_SCALE_X, IMG_MAX_SCALE_Y);
     	
     	ImageView maskImg = new ImageView();
     	if (App.filterFrontend.getMaskImageFile() != null) {
@@ -124,9 +128,6 @@ public class GUIHelper extends Application {
     	TextField imageMaskPathField = new TextField(App.getArgs()[App.ARGS_INDEX_MASK_IMAGE_FILE]);
     	imageMaskPathField.setMinWidth(300);
     	imageMaskPathField.setEditable(false);
-    	TextField imageOutPathField = new TextField(App.getArgs()[App.ARGS_INDEX_OUTPUT_IMAGE_FILE]);
-    	imageOutPathField.setMinWidth(300);
-    	imageOutPathField.setEditable(false);
     	
     	Button importImageButton = new Button("Import Img.");
     	FileChooser imageImporter = new FileChooser();
@@ -135,8 +136,16 @@ public class GUIHelper extends Application {
     	FileChooser maskImporter = new FileChooser();
     	maskImporter.setTitle("Select mask (image) file.");
     	Button saveImageButton = new Button("Export (Save)");
-    	imageExporter = new FileChooser();
-    	imageExporter.setTitle("Select output file.");
+    	imageExporter = new DirectoryChooser();
+    	imageExporter.setTitle("Select output folder.");
+    	
+    	ComboBox<ColorModel> saveColorModelSelection = new ComboBox<>();
+    	saveColorModelSelection.getItems().addAll(ImgFilterFrontend.AVAILABLE_WRITE_OUT_COLOR_MODELS);
+    	saveColorModelSelection.setValue(ImgFilterFrontend.WRITE_OUT_COLOR_MODEL_24BIT);
+    	
+    	ComboBox<ImageFileExtension> saveImageFormatSelection = new ComboBox<>();
+    	saveImageFormatSelection.getItems().addAll(ImageFileExtension.values());
+    	saveImageFormatSelection.setValue(ImageFileExtension.TIFF);
     	
     	Label filterStrengthLabel = new Label("Filter strength / sensitivity");
     	Slider filterStrengthSlider = new Slider(0.0, 1.0, 0.5);
@@ -278,7 +287,7 @@ public class GUIHelper extends Application {
     		imagePathField.setText(newImageFile.getAbsolutePath());
     		App.importImage(newImageFile.getAbsolutePath(), null);
     		img.setImage(convertToFxImage(App.filterFrontend.getLiveImage()));
-    		rescaleImageView(img, IMG_TARGET_SCALE_X);
+    		rescaleImageViewWithMaxY(img, IMG_TARGET_SCALE_X, IMG_MAX_SCALE_Y);
     		if (maskImg != null)
     			rescaleImageView(maskImg, MASK_TARGET_SCALE_X, img.getFitHeight());
     	});
@@ -308,9 +317,10 @@ public class GUIHelper extends Application {
     	
     	saveImageButton.setOnAction(event -> {
     		try {
-    			File imageSaveFile = imageExporter.showSaveDialog(primaryStage);
-    			imageOutPathField.setText(imageSaveFile.getAbsolutePath());
-    			App.filterFrontend.saveFileTo(imageSaveFile);
+    			File imageSaveFolder = imageExporter.showDialog(primaryStage);
+    			System.out.println("Selected save folder: " + imageSaveFolder.getAbsolutePath());
+    			App.filterFrontend.saveFileToFolder(imageSaveFolder,
+    					saveColorModelSelection.getValue(), saveImageFormatSelection.getValue());
     		} catch (IOException ioe) {
     			System.err.println("Error saving file. Does the process have sufficient permissions?");
     			ioe.printStackTrace();
@@ -374,8 +384,9 @@ public class GUIHelper extends Application {
     	controlsPane.add(importImageButton, 1, 0);
     	controlsPane.add(imageMaskPathField, 0, 1);
     	controlsPane.add(importMaskButton, 1, 1);
-    	controlsPane.add(imageOutPathField, 0, 2);
-    	controlsPane.add(saveImageButton, 1, 2);
+    	controlsPane.add(saveImageButton, 0, 2);
+    	controlsPane.add(saveColorModelSelection, 1, 2);
+    	controlsPane.add(saveImageFormatSelection, 2, 2);
     	controlsPane.add(saveOnExitCheckbox, 1, 3);
     	controlsPane.add(filterSelectionDropdown, 0, 4);
     	controlsPane.add(channelSelectionDropdown, 1, 4);
@@ -422,8 +433,9 @@ public class GUIHelper extends Application {
 	public void stop() {
 		if (App.isSaveOnExit()) {
 			try {
-    			File imageSaveFile = imageExporter.showSaveDialog(primaryStage);
-    			App.filterFrontend.saveFileTo(imageSaveFile);
+    			File imageSaveFolder = imageExporter.showDialog(primaryStage);
+    			App.filterFrontend.saveFileToFolder(imageSaveFolder,
+    					ImgFilterFrontend.WRITE_OUT_COLOR_MODEL_24BIT, ImageFileExtension.TIFF);
     		} catch (IOException ioe) {
     			System.err.println("Error saving file. Does the process have sufficient permissions?");
     			ioe.printStackTrace();
@@ -437,6 +449,8 @@ public class GUIHelper extends Application {
 	// FIXME: Test if this method is 100% correctly working
 	// TODO: Add multithreading
     private static Image convertToFxImage(BufferedImage image) {
+    	long startTime = System.currentTimeMillis();
+    	
     	int sourceBitsPerChannel =
     			Integer.divideUnsigned(
     					image.getColorModel().getPixelSize(), image.getColorModel().getNumComponents());
@@ -458,15 +472,24 @@ public class GUIHelper extends Application {
                 }
             }
         }
+        
+        System.out.println("AWT -> FX image conversion time: " + (System.currentTimeMillis() - startTime));
         return new ImageView(wr).getImage();
     }
 	
-    private static void rescaleImageView(ImageView img, double targetScaleX) {
+    private static void rescaleImageViewWithMaxY(ImageView img, double targetScaleX, double maxScaleY) {
     	double imgWidth = img.getImage().getWidth();
 		double imgHeight = img.getImage().getHeight();
     	double imgScale = (double)targetScaleX / imgWidth;
     	double scaledWidth = imgWidth * imgScale;
     	double scaledHeight = imgHeight * imgScale;
+    	
+    	if (scaledHeight > maxScaleY) {
+    		scaledHeight = maxScaleY;
+    		imgScale = maxScaleY / imgHeight;
+    		scaledWidth = imgWidth * imgScale;
+    	}
+    	
     	img.setFitHeight(scaledHeight);
     	img.setFitWidth(scaledWidth);
     }

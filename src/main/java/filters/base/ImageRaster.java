@@ -160,6 +160,12 @@ public class ImageRaster extends WritableRaster {
 	// TODO: Add multithreading
 	// TODO: Move this method to a more appropriate place.
 	public static BufferedImage convertToCompatibleColorModel(BufferedImage source, ColorModel newModel) {
+		if (source.getColorModel().equals(newModel))
+			return new BufferedImage(
+					newModel,
+					new BufferedImage(newModel, source.getRaster(), false, null).copyData(null),
+					false, null);
+		
 		int w = source.getWidth();
 		int h = source.getHeight();
 		
@@ -181,8 +187,8 @@ public class ImageRaster extends WritableRaster {
 				newModel.getPixelSize() / numDestComponents;
 		int bitsPerChannelDifference =
 				destBitsPerChannel - sourceBitsPerChannel;
-		System.out.println("Copy components: " + numSourceComponents + " -> " + numDestComponents);
-		System.out.println("Copy bits/channel: " + sourceBitsPerChannel + " -> " + destBitsPerChannel);
+		System.out.println("CM conversion copy components: " + numSourceComponents + " -> " + numDestComponents);
+		System.out.println("CM conversion copy bits/channel: " + sourceBitsPerChannel + " -> " + destBitsPerChannel);
 		for (int x = 0; x < w; x++) {
 			for (int y = 0; y < h; y++) {
 				int[] sourcePixel = source.getRaster().getPixel(x, y, new int[numSourceComponents]);
