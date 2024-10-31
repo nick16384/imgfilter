@@ -4,27 +4,17 @@ import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
-import filters.Blur101x101;
 import filters.FiltersList;
 import filters.base.Filter;
 import filters.base.ImageRaster;
 import filters.base.MultiPassFilterApplicator;
 import filters.base.RGBChannel;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
@@ -140,12 +130,39 @@ public class GUIHelper extends Application {
     	imageExporter.setTitle("Select output folder.");
     	
     	ComboBox<ColorModel> saveColorModelSelection = new ComboBox<>();
-    	saveColorModelSelection.getItems().addAll(ImgFilterFrontend.AVAILABLE_WRITE_OUT_COLOR_MODELS);
+    	saveColorModelSelection.getItems().addAll(
+    			ImgFilterFrontend.AVAILABLE_WRITE_OUT_COLOR_MODEL_STRING_MAP.keySet());
     	saveColorModelSelection.setValue(ImgFilterFrontend.WRITE_OUT_COLOR_MODEL_24BIT);
+    	StringConverter<ColorModel> colorModelStringConverter = new StringConverter<>() {
+    		@Override
+    		public ColorModel fromString(String str) {
+    			return StreamHelper.getKeyFromValue(
+    					ImgFilterFrontend.AVAILABLE_WRITE_OUT_COLOR_MODEL_STRING_MAP,
+    					str);
+    		}
+    		@Override
+    		public String toString(ColorModel colorModel) {
+    			return ImgFilterFrontend.AVAILABLE_WRITE_OUT_COLOR_MODEL_STRING_MAP.get(colorModel);
+    		}
+    	};
+    	saveColorModelSelection.setConverter(colorModelStringConverter);
     	
     	ComboBox<ImageFileExtension> saveImageFormatSelection = new ComboBox<>();
     	saveImageFormatSelection.getItems().addAll(ImageFileExtension.values());
-    	saveImageFormatSelection.setValue(ImageFileExtension.TIFF);
+    	saveImageFormatSelection.setValue(ImageFileExtension.PNG);
+    	
+    	Label bitDepthLabel = new Label("Bit depth");
+    	Label imageFormatLabel = new Label("Image format");
+    	
+    	GridPane imageExportPane = new GridPane();
+    	imageExportPane.setVgap(5);
+    	imageExportPane.setHgap(10);
+    	imageExportPane.setAlignment(Pos.CENTER_LEFT);
+    	imageExportPane.add(bitDepthLabel, 1, 0);
+    	imageExportPane.add(imageFormatLabel, 2, 0);
+    	imageExportPane.add(saveImageButton, 0, 1);
+    	imageExportPane.add(saveColorModelSelection, 1, 1);
+    	imageExportPane.add(saveImageFormatSelection, 2, 1);
     	
     	Label filterStrengthLabel = new Label("Filter strength / sensitivity");
     	Slider filterStrengthSlider = new Slider(0.0, 1.0, 0.5);
@@ -318,6 +335,10 @@ public class GUIHelper extends Application {
     	saveImageButton.setOnAction(event -> {
     		try {
     			File imageSaveFolder = imageExporter.showDialog(primaryStage);
+    			if (imageSaveFolder == null) {
+    				System.err.println("Cancelled save operation.");
+    				return;
+    			}
     			System.out.println("Selected save folder: " + imageSaveFolder.getAbsolutePath());
     			App.filterFrontend.saveFileToFolder(imageSaveFolder,
     					saveColorModelSelection.getValue(), saveImageFormatSelection.getValue());
@@ -384,9 +405,7 @@ public class GUIHelper extends Application {
     	controlsPane.add(importImageButton, 1, 0);
     	controlsPane.add(imageMaskPathField, 0, 1);
     	controlsPane.add(importMaskButton, 1, 1);
-    	controlsPane.add(saveImageButton, 0, 2);
-    	controlsPane.add(saveColorModelSelection, 1, 2);
-    	controlsPane.add(saveImageFormatSelection, 2, 2);
+    	controlsPane.add(imageExportPane, 0, 2);
     	controlsPane.add(saveOnExitCheckbox, 1, 3);
     	controlsPane.add(filterSelectionDropdown, 0, 4);
     	controlsPane.add(channelSelectionDropdown, 1, 4);
@@ -418,7 +437,7 @@ public class GUIHelper extends Application {
     	double imgScale = (double)IMG_TARGET_SCALE_X / App.filterFrontend.imgWidth;
     	double scaledWidth = App.filterFrontend.imgWidth * imgScale;
     	double scaledHeight = App.filterFrontend.imgHeight * imgScale;
-        Scene scene = new Scene(root, scaledWidth + 500, scaledHeight + 50);
+        Scene scene = new Scene(root, scaledWidth + 550, scaledHeight + 50);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Image filter " + App.VERSION_STRING);
         primaryStage.show();
@@ -434,6 +453,10 @@ public class GUIHelper extends Application {
 		if (App.isSaveOnExit()) {
 			try {
     			File imageSaveFolder = imageExporter.showDialog(primaryStage);
+    			if (imageSaveFolder == null) {
+    				System.err.println("Cancelled save operation.");
+    				return;
+    			}
     			App.filterFrontend.saveFileToFolder(imageSaveFolder,
     					ImgFilterFrontend.WRITE_OUT_COLOR_MODEL_24BIT, ImageFileExtension.TIFF);
     		} catch (IOException ioe) {

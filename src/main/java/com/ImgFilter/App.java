@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
+import javax.imageio.ImageIO;
+
 
 public class App {
 	public static final String VERSION_STRING = "v2024.10A";

@@ -10,7 +10,9 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
 
@@ -20,6 +22,8 @@ import filters.base.ImageRaster;
 import filters.base.MultiPassFilterApplicator;
 import filters.base.RGBChannel;
 
+import static java.util.Map.entry;
+
 /**
  * Note: Errors on linux might be fixed by additionally checking
  * file.getCanonicalFile() variants.
@@ -27,13 +31,14 @@ import filters.base.RGBChannel;
 
 public class ImgFilterFrontend {
 	public static final ColorModel WRITE_OUT_COLOR_MODEL_24BIT =
-			new ComponentColorModel(
+			ColorModel.getRGBdefault();
+			/*new ComponentColorModel(
 					ColorSpace.getInstance(ColorSpace.CS_LINEAR_RGB),
 					new int[] {8, 8, 8},
 					false,
 					false,
 					ColorModel.OPAQUE,
-					DataBuffer.TYPE_INT);
+					DataBuffer.TYPE_INT);*/
 	public static final ColorModel WRITE_OUT_COLOR_MODEL_48BIT =
 			new ComponentColorModel(
 					ColorSpace.getInstance(ColorSpace.CS_LINEAR_RGB),
@@ -50,10 +55,13 @@ public class ImgFilterFrontend {
 					false,
 					ColorModel.OPAQUE,
 					DataBuffer.TYPE_INT);
-	public static final List<ColorModel> AVAILABLE_WRITE_OUT_COLOR_MODELS = Arrays.asList(
-			WRITE_OUT_COLOR_MODEL_24BIT,
-			WRITE_OUT_COLOR_MODEL_48BIT,
-			WRITE_OUT_COLOR_MODEL_72BIT);
+	public static final HashMap<ColorModel, String> AVAILABLE_WRITE_OUT_COLOR_MODEL_STRING_MAP =
+			new HashMap<>(
+					Map.ofEntries(
+							entry(WRITE_OUT_COLOR_MODEL_24BIT, "24 bits per pixel"),
+							entry(WRITE_OUT_COLOR_MODEL_48BIT, "[WIP] 48 bits per pixel"),
+							entry(WRITE_OUT_COLOR_MODEL_72BIT, "[WIP] 72 bits per pixel"))
+					);
 	
 	Filter<ImageRaster> currentFilter;
 	private final File imgFile;
@@ -87,7 +95,8 @@ public class ImgFilterFrontend {
 		this.imgFile = imgIn;
 		BufferedImage maybeIncompatibleImage = ImageIO.read(imgIn);
 		this.image =
-				ImageRaster.convertToCompatibleColorModel(maybeIncompatibleImage, ImageRaster.DEFAULT_COLOR_MODEL);
+				ImageRaster.convertToCompatibleColorModel(
+						maybeIncompatibleImage, ImageRaster.DEFAULT_COLOR_MODEL, true);
 		
 		imgHeight = image.getHeight();
 		imgWidth = image.getWidth();
@@ -272,10 +281,17 @@ public class ImgFilterFrontend {
 		
 		// TODO: Try writing with different color model (24 bit, 16 bit or 8 bit depending on user)
 		System.out.println("Converting color models.");
-		BufferedImage imageWithWriteOutColorModel = ImageRaster.convertToCompatibleColorModel(image, writeOutColorModel);
+		BufferedImage imageWithWriteOutColorModel =
+				ImageRaster.convertToCompatibleColorModel(image, writeOutColorModel, false);
 		System.out.println("Writing image.");
-		boolean writeResult = ImageIO.write(imageWithWriteOutColorModel, extension.getAllFileExtensions()[0].substring(1), outFile);
-		if (!writeResult)
+		
+		System.out.println("Using extension \"" + extension.getAllFileExtensions()[0].substring(1) + "\"");
+		
+		boolean isWriteSuccessful = ImageIO.write(
+						imageWithWriteOutColorModel,
+						extension.getAllFileExtensions()[0].substring(1),
+						outFile);
+		if (!isWriteSuccessful)
 			System.err.println("No appropriate image writer found.");
 		else
 			System.out.println("Saved.");

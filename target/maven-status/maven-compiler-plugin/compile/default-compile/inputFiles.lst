@@ -1,5 +1,6 @@
 /home/theophil/git/ImgFilter/src/main/java/com/ImgFilter/App.java
 /home/theophil/git/ImgFilter/src/main/java/com/ImgFilter/GUIHelper.java
+/home/theophil/git/ImgFilter/src/main/java/com/ImgFilter/ImageFileExtension.java
 /home/theophil/git/ImgFilter/src/main/java/com/ImgFilter/ImgFilterFrontend.java
 /home/theophil/git/ImgFilter/src/main/java/com/ImgFilter/SystemInfo.java
 /home/theophil/git/ImgFilter/src/main/java/filters/Blur101x101.java
@@ -20,6 +21,8 @@
 /home/theophil/git/ImgFilter/src/main/java/filters/MedianBlur.java
 /home/theophil/git/ImgFilter/src/main/java/filters/None.java
 /home/theophil/git/ImgFilter/src/main/java/filters/RandomNoise.java
+/home/theophil/git/ImgFilter/src/main/java/filters/ReducePartial.java
+/home/theophil/git/ImgFilter/src/main/java/filters/Saturation.java
 /home/theophil/git/ImgFilter/src/main/java/filters/Sharpening.java
 /home/theophil/git/ImgFilter/src/main/java/filters/TurboColor2.java
 /home/theophil/git/ImgFilter/src/main/java/filters/TurboTurboTM.java

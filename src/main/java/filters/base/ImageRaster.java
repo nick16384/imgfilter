@@ -9,6 +9,7 @@ import java.awt.image.ColorModel;
 import java.awt.image.ComponentColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.WritableRaster;
+import java.util.Arrays;
 
 public class ImageRaster extends WritableRaster {
 	/**
@@ -39,7 +40,7 @@ public class ImageRaster extends WritableRaster {
 	public static final int INDEX_SAMPLE_BLUE = 2;
 	
 	public ImageRaster(BufferedImage fromImage) {
-		this(convertToCompatibleColorModel(fromImage, DEFAULT_COLOR_MODEL).getRaster());
+		this(convertToCompatibleColorModel(fromImage, DEFAULT_COLOR_MODEL, true).getRaster());
 	}
 	
 	private ImageRaster(WritableRaster fromRaster) {
@@ -155,11 +156,17 @@ public class ImageRaster extends WritableRaster {
 	/**
 	 * Copies pixel data from one image to another with a different ColorModel.
 	 * @param source
+	 * @param newModel The ColorModel, which the new image should have
+	 * @param isDataAlignedRight When copying data and the source / destination component count
+	 * differ, decides where the source data is aligned in the destination buffer.
 	 * @return
 	 */
 	// TODO: Add multithreading
 	// TODO: Move this method to a more appropriate place.
-	public static BufferedImage convertToCompatibleColorModel(BufferedImage source, ColorModel newModel) {
+	public static BufferedImage convertToCompatibleColorModel(
+			BufferedImage source,
+			ColorModel newModel,
+			boolean isDataAlignedRight) {
 		if (source.getColorModel().equals(newModel))
 			return new BufferedImage(
 					newModel,
@@ -181,6 +188,13 @@ public class ImageRaster extends WritableRaster {
 		// Manual copy, method above does not work
 		int numSourceComponents = source.getColorModel().getNumComponents();
 		int numDestComponents = newModel.getNumComponents();
+		if (numSourceComponents < numDestComponents)
+			System.err.println("Warning: Source component count smaller than destination component count.\n"
+					+ "Filling empty channels with max. sample value!");
+		else if (numSourceComponents > numDestComponents)
+			System.err.println("Warning: Source component count larger than destination component count.\n"
+					+ "Image data is lost during conversion!");
+		
 		int sourceBitsPerChannel =
 				source.getColorModel().getPixelSize() / numSourceComponents;
 		int destBitsPerChannel = 
@@ -189,16 +203,49 @@ public class ImageRaster extends WritableRaster {
 				destBitsPerChannel - sourceBitsPerChannel;
 		System.out.println("CM conversion copy components: " + numSourceComponents + " -> " + numDestComponents);
 		System.out.println("CM conversion copy bits/channel: " + sourceBitsPerChannel + " -> " + destBitsPerChannel);
+		System.out.println("Copying components " + (isDataAlignedRight ? "tail first." : "head first."));
+		copyLoop:
 		for (int x = 0; x < w; x++) {
 			for (int y = 0; y < h; y++) {
 				int[] sourcePixel = source.getRaster().getPixel(x, y, new int[numSourceComponents]);
 				int[] sourcePixelConverted = new int[numDestComponents];
+				// If source has less components than destination, these empty components are filled
+				// with the maximum sample value. (This is, because the leftover channel is
+				// usually the alpha channel, where max. sample value indicates full opacity.)
+				Arrays.fill(sourcePixelConverted, MAX_SAMPLE_VALUE);
 				
-				// Iterate over each color component (usually red, green and blue)
-				for (int i = 0; i < numDestComponents; i++) {
-					int sourceSample = sourcePixel[i];
-					sourceSample *= (int)Math.pow(2, bitsPerChannelDifference);
-					sourcePixelConverted[i] = sourceSample;
+				// Iterate over each color component (usually red, green and blue; sometimes also alpha)
+				// Whichever raster has less components determines the amount of copy
+				// iterations. Thus, when the source has more components than the
+				// destination, some image data is lost.
+				for (int i = 0; i < numSourceComponents; i++) {
+					int srcIdx;
+					if (isDataAlignedRight)
+						srcIdx = numSourceComponents - 1 - i;
+					else
+						srcIdx = i;
+					
+					int sourceSample = sourcePixel[srcIdx];
+					// Decide whether to multiply or divide (since int can't store values between 0 and 1)
+					if (bitsPerChannelDifference >= 0)
+						sourceSample *= (int)Math.pow(2, bitsPerChannelDifference);
+					else
+						sourceSample = Integer.divideUnsigned(
+								sourceSample,
+								(int)Math.pow(2, -bitsPerChannelDifference));
+					
+					int dstIdx;
+					if (isDataAlignedRight)
+						dstIdx = numDestComponents - 1 - i;
+					else
+						dstIdx = i;
+					if ((isDataAlignedRight && dstIdx < 0)
+							|| (!isDataAlignedRight && dstIdx >= numDestComponents)) {
+						System.err.println("Copy stopped at iteration " + (i + 1) + ".\n"
+								+ "Source components not copied: " + (numSourceComponents - i));
+						break copyLoop;
+					}
+					sourcePixelConverted[dstIdx] = sourceSample;
 				}
 				
 				//result.getRaster().setPixel(x, y, new int[] {0x00000001, 0x90000000, 0x8000000});

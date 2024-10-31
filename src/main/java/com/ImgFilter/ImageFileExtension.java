@@ -4,9 +4,9 @@ import java.io.File;
 
 public enum ImageFileExtension {
 	
-	JPEG("JPEG", ".jpeg", ".jpg"),
+	JPEG("[WIP] JPEG", ".jpeg", ".jpg"),
 	PNG("PNG", ".png"),
-	BMP("BMP", ".bmp"),
+	BMP("[WIP] BMP", ".bmp"),
 	TIFF("TIFF", ".tiff", ".tif");
 	
 	private String name;

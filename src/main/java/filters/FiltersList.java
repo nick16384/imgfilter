@@ -9,6 +9,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.ImgFilter.StreamHelper;
+
 import filters.base.Filter;
 import filters.base.ImageRaster;
 
@@ -56,22 +58,12 @@ public final class FiltersList {
 	public static final Filter<ImageRaster> DEFAULT_MASK_FILTER = new Mask_Multiply();
 	
 	public static Filter<ImageRaster> fromString(String str) {
-		return combineMaps(FILTERS_LIST, MASK_FILTER_LIST).get(str);
+		return StreamHelper.combineMaps(FILTERS_LIST, MASK_FILTER_LIST).get(str);
 	}
 	
 	public static String toString(Filter<ImageRaster> filter) {
-		return combineMaps(FILTERS_LIST, MASK_FILTER_LIST).entrySet()
-	              .stream()
-	              .filter(entry -> Objects.equals(entry.getValue(), filter))
-	              .map(Map.Entry::getKey)
-	              .findFirst()
-	              .orElse(null);
-	}
-	
-	private static <K, V> Map<K, V> combineMaps(Map<K, V> map1, Map<K, V> map2) {
-		Stream<Entry<K, V>> combinedMapsStream =
-				Stream.concat(map1.entrySet().stream(), map2.entrySet().stream());
-		return combinedMapsStream.collect(
-				  Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+		return StreamHelper.getKeyFromValue(
+				StreamHelper.combineMaps(FILTERS_LIST, MASK_FILTER_LIST),
+				filter);
 	}
 }
